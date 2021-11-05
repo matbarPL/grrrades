@@ -11,3 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 source("student-merge.R")
 ```
 
+```{r}
+# substitute x's and y's with informative abbreviations
+make_colnames <- function(complete_data){
+  
+  colnames(complete_data) <- sub("[.]x$","_mat",colnames(complete_data))
+    colnames(complete_data) <- sub("[.]y$","_port",colnames(complete_data))
+    return(complete_data)
+}
+# example use
+tmp <- make_colnames(d3)
+```
+
