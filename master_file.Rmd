@@ -1,25 +1,76 @@
 ---
 title: "AVR"
-output: html_document
+output:
+html_document:
+df_print: paged
+toc: yes
+toc_float:
+collapsed: yes
+smooth_scroll: no
+bibliography: bibliography.bib
+nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse)
 ```
 
+# Introduction
+
+Data was gathered using questionnaires and mark reports. Mark reports were provided
+by schools and consist of grades and absences. Grades are evaluated in three periods
+and marked in a 20-point grading scale where 0 is the lowest possible mark and
+20 the highest. The former was used to gather the data for the several demographic,
+social/emotional and school related variables. The final questionnaire containing
+37 questions in a single A4 sheet was answered in class by 788 students. Later
+111 answers were discarded due to lack of identification details. At the end the
+data was merged into two samples that related to Mathematics (395) and
+Portuguese (649) classes.
+
 ```{r}
-source("student-merge.R")
+master_data <- read_data()
+```
+
+# Question 1
+Getting into the weeds of student’s health among two schools might reveal their well-being.
+
+When analyzing the dataset it confused us that there are two separate columns for health.
+We were convinced that this should be gathered only once during the research. We have
+decided to check how sitting in the particular subject influences the responses.
+
+```{r}
+health_eq_acc_points <- master_data %>%
+        mutate(health_eq = if_else(health_m == health_p, 1, 0)) %>%
+        group_by(health_m, health_p) %>%
+        summarise(cnt = n())
 ```
 
 ```{r}
 # substitute x's and y's with informative abbreviations
 make_colnames <- function(complete_data){
-  
+
   colnames(complete_data) <- sub("[.]x$","_mat",colnames(complete_data))
-    colnames(complete_data) <- sub("[.]y$","_port",colnames(complete_data))
-    return(complete_data)
+  colnames(complete_data) <- sub("[.]y$","_port",colnames(complete_data))
+  return(complete_data)
 }
 # example use
 tmp <- make_colnames(d3)
 ```
 
+```{r}
+ggplot(master_data %>%
+               inner_join(health_eq_acc_points),
+       aes(x = health_m, y = health_p, size = cnt)) +
+        scale_size(name   = "",
+                   breaks = c(144, 61, 1),
+                   labels = c('144', '[42, 80]', '[1, 2]')) +
+        geom_point() +
+        labs(y = 'Health reported in the math classes',
+             x = 'Health reported in the portugese classes',
+             title = 'Relationship between reported health at Math and Portguese classess')
+```
+
+Most students reported the same health condition in Math and Portugese classes.
+
+# References
