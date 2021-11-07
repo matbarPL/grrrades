@@ -4,6 +4,6 @@ read_data <- function(){
   index = c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
   d3=merge(d1,
            d2,
-           by=index)
+           by=index,suffixes = c("_m", "_p"))
   return (d3)
 }
