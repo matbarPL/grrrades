@@ -1,12 +1,12 @@
 ---
 title: "AVR"
 output:
-html_document:
-df_print: paged
-toc: yes
-toc_float:
-collapsed: yes
-smooth_scroll: no
+  html_document:
+      df_print: paged
+      toc: yes
+      toc_float: yes
+      collapsed: yes
+      smooth_scroll: no
 bibliography: bibliography.bib
 nocite: '@*'
 ---
@@ -14,6 +14,7 @@ nocite: '@*'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse)
+options(device = "windows")
 ```
 
 # Introduction
@@ -29,6 +30,7 @@ data was merged into two samples that related to Mathematics (395) and
 Portuguese (649) classes.
 
 ```{r}
+source("read_data.R")
 master_data <- read_data()
 ```
 
@@ -36,8 +38,7 @@ master_data <- read_data()
 Getting into the weeds of student’s health among two schools might reveal their well-being.
 
 When analyzing the dataset it confused us that there are two separate columns for health.
-We were convinced that this should be gathered only once during the research. We have
-decided to check how sitting in the particular subject influences the responses.
+We were convinced that this should be gathered only once during the research. The decision was made to check how attending the particular subject influences the responses.
 
 ```{r}
 health_eq_acc_points <- master_data %>%
@@ -46,17 +47,6 @@ health_eq_acc_points <- master_data %>%
         summarise(cnt = n())
 ```
 
-```{r}
-# substitute x's and y's with informative abbreviations
-make_colnames <- function(complete_data){
-
-  colnames(complete_data) <- sub("[.]x$","_mat",colnames(complete_data))
-  colnames(complete_data) <- sub("[.]y$","_port",colnames(complete_data))
-  return(complete_data)
-}
-# example use
-tmp <- make_colnames(d3)
-```
 
 ```{r}
 ggplot(master_data %>%
