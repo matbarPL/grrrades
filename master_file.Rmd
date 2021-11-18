@@ -13,7 +13,7 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, readxl)
 options(device = "windows")
 ```
 
@@ -29,11 +29,34 @@ social/emotional and school related variables. The final questionnaire containin
 data was merged into two samples that related to Mathematics (395) and
 Portuguese (649) classes.
 
+The merged dataset consist of 13 variables that uniquely identifies
+each row and 20 that describe their performance at one of the subjects. 
+All the features can be split into categorical and numerical ones, but we 
+are rather interested in analyzing the variables rather than the right survey distribution.
+
+```{r}
+c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
+```
+
+
+
 ```{r}
 source("read_data.R")
 master_data <- read_data()
+dictionary <- read_excel("dictionary.xlsx")
 ```
 
+Let's plot the dependency between grades in Math and Portugese subjects.
+
+```{r}
+ggplot(master_data, aes(G1_m, G1_p)) +
+  geom_point(aes(size = freetime_m)) +
+  geom_smooth() +
+  labs(x = "Grade in Mathematics",
+       y = "Grade in Portugese",
+       title = "Relationship between results in the first period")
+```
+Smaller points in the plot show that students with very little freetime haven't managed to keep excellent results in both subjects and they need to prioritize. 
 # Question 1
 Getting into the weeds of student’s health among two schools might reveal their well-being.
 
