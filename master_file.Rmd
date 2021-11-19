@@ -9,6 +9,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 source("student-merge.R")
+pacman::p_load(ggplot2, 
+               dplyr
+               )
 ```
 
 ```{r}
@@ -20,6 +23,36 @@ make_colnames <- function(complete_data){
     return(complete_data)
 }
 # example use
-tmp <- make_colnames(d3)
+d3 <- make_colnames(d3)
+```
+
+
+```{r}
+# check differences in _mat and_port columns
+
+# get only duplicated columns:
+
+dupl_cols <- grepl(".+(_mat)",colnames(d3)) %>% colnames(d3)[.]
+
+# for each column compare both _mat and _port
+
+col_diffs_selector <- list()
+col_diffs_sum <- list()
+
+for (col in dupl_cols) {
+  alt_col <- col %>% sub("_mat","_port",.)
+  
+  col_diffs_selector[[col]] <- d3[col] != d3[alt_col]
+  col_diffs_sum[[col]] <- sum(d3[col] != d3[alt_col])/nrow(d3)
+  
+}
+
+# now for each column we can see the percentage of rows that differ and select those observations
+col <- dupl_cols[1]
+alt_col <- col %>% sub("_mat","_port",.)
+col_diffs_sum[col]
+col_diffs_selector[[col]] %>% d3[.,c(col,alt_col)]
+
+
 ```
 
