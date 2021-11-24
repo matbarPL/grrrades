@@ -95,6 +95,27 @@ master_data %>% select(schoolsup_m,schoolsup_p) %>% mutate(n=1) %>% pivot_longer
 ```
 
 
+```{r}
+# better varsion of barplot to answer the quesition
+
+# create additional variables
+
+master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
+  summarise(n = n(), grade = mean(G3_m)) %>% 
+  arrange(-grade)%>% pivot_longer(c(famsup_m,schoolsup_m,paid_m)) %>% 
+  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
+
+tiles_df <- data.frame(
+  x = rep(seq(2,16,2), 3),
+  y = rep(c(1,2,3), each = 8)
+) %>% arrange(x) %>% mutate(z = tmp_1$value)
+ggplot() +
+  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "grey50", alpha = 0.3)+
+  scale_fill_manual(values=c("#a3d487", "#f21a02"))+
+  scale_y_continuous(labels = c("a","b","c"), breaks = c(1,2,3))
+```
+
+
 Most students reported the same health condition in Math and Portugese classes.
 
 # References
