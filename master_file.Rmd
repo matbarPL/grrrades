@@ -13,7 +13,7 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse)
+pacman::p_load(tidyverse, ggpubr)
 ```
 
 # Introduction
@@ -61,6 +61,39 @@ ggplot(master_data %>%
              x = 'Health reported in the portugese classes',
              title = 'Relationship between reported health at Math and Portguese classess')
 ```
+# Question 2
+What kind of support students with each subject? 
+
+```{r barplots}
+
+sum(master_data$paid_m != master_data$paid_p)
+# subject support from family
+
+master_data %>% select(famsup_m,famsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge") +
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain family support?")+
+  xlab(NULL)
+
+# paid support
+master_data %>% select(paid_m,paid_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge")+
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain paid support?")+
+  xlab(NULL)
+
+# school support
+master_data %>% select(schoolsup_m,schoolsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge")+
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain school support?")+
+  xlab(NULL)
+
+```
+
 
 Most students reported the same health condition in Math and Portugese classes.
 
