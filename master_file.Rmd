@@ -30,6 +30,7 @@ Portuguese (649) classes.
 
 ```{r}
 source("read_data.R")
+source("plot_functions.R")
 master_data <- read_data()
 ```
 
@@ -96,23 +97,108 @@ master_data %>% select(schoolsup_m,schoolsup_p) %>% mutate(n=1) %>% pivot_longer
 
 
 ```{r}
-# better varsion of barplot to answer the quesition
+# better varsion of barplot to answer the quesition MATHS
 
 # create additional variables
 
 master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
   summarise(n = n(), grade = mean(G3_m)) %>% 
-  arrange(-grade)%>% pivot_longer(c(famsup_m,schoolsup_m,paid_m)) %>% 
+  arrange(-grade) %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m)) %>% 
   mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
 
+supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
+  summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>% 
+  mutate(cat_name = paste("f",famsup_m,"s",schoolsup_m,"p",paid_m,sep = '_')) %>% 
+  mutate(id = cur_group_id())
+
+tmp_1 <- supp_m  %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m))
+## tiles
+# calculate positions of tiles
+max_n <- 1#max(supp_m$n)
+tile_half_height <- (max_n*1.01)/6
+tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
+
 tiles_df <- data.frame(
-  x = rep(seq(2,16,2), 3),
-  y = rep(c(1,2,3), each = 8)
-) %>% arrange(x) %>% mutate(z = tmp_1$value)
-ggplot() +
-  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "grey50", alpha = 0.3)+
-  scale_fill_manual(values=c("#a3d487", "#f21a02"))+
-  scale_y_continuous(labels = c("a","b","c"), breaks = c(1,2,3))
+  x = rep(seq(1,8,1), 3),
+  y = rep(tile_y_middles, each = 8)
+)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+
+#maths
+supp_plot_m <- ggplot() +
+  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
+  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
+  scale_x_discrete()+
+  geom_col(data = supp_m, aes(x=cat_name,y=n/sum(n)), alpha = 0.8, width = 0.8, fill = "steelblue")+
+  scale_y_continuous(breaks = seq(0,1, length.out = 5) 
+                    ,sec.axis = sec_axis( ~.,
+                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
+                                          labels = c("Family support","School support", "Paid support")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        panel.background = element_blank(),
+        axis.line.y = element_line())+
+  ylab("Fraction of students")+
+  ggtitle("Maths")
+
+supp_plot_m 
+
+```
+
+```{r}
+# better varsion of barplot to answer the quesition PORT
+
+# create additional variables
+
+master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
+  summarise(n = n(), grade = mean(G3_p)) %>% 
+  arrange(-grade) %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p)) %>% 
+  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
+
+supp_p <- master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
+  summarise(n = n(), grade = mean(G3_p), .groups = "rowwise") %>% 
+  mutate(cat_name = paste("f",famsup_p,"s",schoolsup_p,"p",paid_p,sep = '_')) %>% 
+  mutate(id = cur_group_id())
+
+tmp_1 <- supp_p  %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p))
+## tiles
+# calculate positions of tiles
+max_n <- max(supp_p$n)
+tile_half_height <- (max_n+2)/6
+tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
+
+tiles_df <- data.frame(
+  x = rep(seq(1,8,1), 3),
+  y = rep(tile_y_middles, each = 8)
+)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+
+
+supp_plot_p <- ggplot() +
+  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
+  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
+  scale_x_discrete()+
+  geom_col(data = supp_p, aes(x=cat_name,y=n), alpha = 0.8, width = 0.8, fill = "steelblue")+
+  scale_y_continuous(breaks = seq(10,max(supp_p$n), length.out = 5) %>% round() 
+                    ,sec.axis = sec_axis( ~.,
+                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
+                                          labels = c("Family support","School support", "Paid support")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        panel.background = element_blank(),
+        axis.line.y = element_line())+
+  ylab("Number of students")+
+  ggtitle("Portuguese")
+
+
+```
+```{r}
+supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
+                                          title = '')
+supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p)
+supp_plot_m
+supp_plot_p
+ggarrange(supp_plot_p,supp_plot_m,common.legend = T , legend = "bottom")
 ```
 
 
