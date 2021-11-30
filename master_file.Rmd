@@ -1,6 +1,14 @@
 ---
 title: "AVR"
-output: html_document
+output:
+  html_document:
+      df_print: paged
+      toc: yes
+      toc_float: yes
+      collapsed: yes
+      smooth_scroll: no
+bibliography: bibliography.bib
+nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
@@ -273,10 +281,13 @@ grade_per_subject_long <-
   pivot_longer(-row_num) %>%
   separate(name, c("grade", "subject"))
 ```
+
 ```{r}
 subject_pretty_names <- tibble(short_name = c('m', 'p'),
                                pretty_name = c('Mathematics','Portugese'))
 ```
+
+
 ```{r}
 ggplot(data = grade_per_subject_long %>%
   inner_join(subject_pretty_names,
@@ -307,6 +318,72 @@ grade_per_subject_long <-
   separate(name, c("grade", "subject"))
 ```
 
+```{r}
+subject_pretty_names <- tibble(short_name = c('m', 'p'),
+                               pretty_name = c('Mathematics','Portugese'))
+```
+```{r}
+grade_per_subject_long %>%
+  inner_join(subject_pretty_names, by = c("subject" = 'short_name')) %>%
+  ggplot(aes(x = value)) +
+  geom_density() +
+  facet_grid(grade~pretty_name)
+```
+
+Grades for Portugese were consistently higher than in Mathematics.
+We do not observe neither a positive nor negative trend relating
+to the subsequent periods results'.
+
+
+```{r}
+grade_per_subject_long <-
+  master_data %>%
+  mutate(row_num = row_number()) %>%
+  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
+  pivot_longer(-row_num) %>%
+  separate(name, c("grade", "subject"))
+
+absences.agg <- master_data %>%
+  group_by(freetime_m, goout_m) %>%
+  summarise(across(absences_m, ~n()))
+
+low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
+                         pretty_level = c('very low',
+                                               'low',
+                                               'medium',
+                                               'high',
+                                               'very high'))
+
+absences.agg.to.plot.m <- absences.agg %>%
+  ungroup() %>%
+  inner_join(low.high.map,
+             by = c("freetime_m" = "ugly_level")) %>%
+  rename( freetime_pretty = pretty_level) %>%
+  inner_join(low.high.map,
+             by = c("goout_m" = "ugly_level")) %>%
+  rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_m)
+
+absences.m.plot <-
+  ggplot(absences.agg.to.plot.m, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
+  geom_tile(aes(fill = absences_m), color = 'white', show.legend = F) +
+  theme_minimal() +
+  geom_text(aes(label = absences_m), size = 5, fontface = 'bold', color = 'white') +
+    theme(panel.grid = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank()) + ggtitle('Mathematics')
+```
+```{r}
+absences.agg <- master_data %>%
+  group_by(freetime_p, goout_p) %>%
+  summarise(across(absences_p, ~n()))
+
+low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
+                       pretty_level = c('very low',
+                                        'low',
+                                        'medium',
+                                        'high',
+                                        'very high'))
+```
 
 ```{r}
 grade_per_subject_long %>%
@@ -316,4 +393,39 @@ grade_per_subject_long %>%
   facet_grid(grade~pretty_name)
 ```
 
+```{r}
+absences.agg.to.plot.p <- absences.agg %>%
+  ungroup() %>%
+  inner_join(low.high.map,
+             by = c("freetime_p" = "ugly_level")) %>%
+  rename( freetime_pretty = pretty_level) %>%
+  inner_join(low.high.map,
+             by = c("goout_p" = "ugly_level")) %>%
+  rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_p)
+```
 
+
+```{r}
+absences.p.plot <-
+ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
+  geom_tile(aes(fill = absences_p), color = 'white', show.legend = F) +
+  theme_minimal() +
+  geom_text(aes(label = absences_p), size = 5, fontface = 'bold', color = 'white') +
+  theme(panel.grid = element_blank(),
+axis.title.x = element_blank(),
+        axis.title.y = element_blank()) + ggtitle('Portugese')
+```
+
+```{r}
+grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
+                         absences.p.plot + theme(legend.position = "none"),
+                         ncol = 2),
+             nrow = 2,
+             heights = c(10, 1), # relative height of two rows
+             top = textGrob("Consideration of the spare time might be an indicator for the number of absences.", vjust = 1, gp = gpar(fontface = "bold", cex = 1.5)),
+             left = textGrob("Free time after school", rot = 90, vjust = 1),
+             bottom = textGrob("Going out with friends", rot = 0, vjust = -2)
+)
+
+```
+# References
