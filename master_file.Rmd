@@ -13,7 +13,7 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, ggpubr)
+pacman::p_load(tidyverse, ggpubr, riverplot)
 ```
 
 # Introduction
@@ -62,6 +62,10 @@ ggplot(master_data %>%
              x = 'Health reported in the portugese classes',
              title = 'Relationship between reported health at Math and Portguese classess')
 ```
+
+
+Most students reported the same health condition in Math and Portuguese classes.
+
 # Question 2
 What kind of support students with each subject? 
 
@@ -193,6 +197,7 @@ supp_plot_p <- ggplot() +
 
 ```
 ```{r}
+
 supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
                                           title = '')
 supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p)
@@ -201,7 +206,45 @@ supp_plot_p
 ggarrange(supp_plot_p,supp_plot_m,common.legend = T , legend = "bottom")
 ```
 
+# Question 3
+Do students improve their grades during the year?
 
-Most students reported the same health condition in Math and Portugese classes.
+```{r}
+# attempt 1
+# data
+tmp1 <- master_data %>% 
+  select(matches("G._m")) %>% 
+  drop_na()%>% 
+  mutate(across(everything(),
+                ~cut(.x,breaks = c(-1,7,15,21),
+                    labels = c("low","medium","high")))) %>% 
+  group_by(G1_m,G2_m) %>%
+  summarise(n = n()) %>% 
+  mutate(G1_m = paste0("First ",G1_m),
+         G2_m = paste0("Second ",G2_m)) %>% 
+  arrange(-n)
+
+
+# final plot
+nodes <- data.frame(ID = unique(c(tmp1$G1_m,tmp1$G2_m)),
+                    x = c(rep(1,3),rep(2,3)))
+edges <- data.frame(ID = 1:nrow(tmp1),
+                    N1 = tmp1$G1_m,
+                    N2 = tmp1$G2_m,
+                    Value = tmp1$n)
+cols <- c(low="#00990066",
+medium="#00009966",
+high ="#99000066")
+style <- sapply(nodes$ID, function(id)
+list(col=cols[ gsub("(First|Second) ", "", id) ]), simplify=FALSE)
+
+
+r <- makeRiver(nodes,edges,styles =style) 
+d <- list(srt=0, textcex=1.5) # default style
+plot(r, plot_area=1, nodewidth=10, default_style=d)
+
+```
+
+
 
 # References
