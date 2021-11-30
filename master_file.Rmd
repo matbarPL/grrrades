@@ -5,9 +5,315 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid)
+options(device = "windows")
+```
+
+# Introduction
+
+Data was gathered using questionnaires and mark reports. Mark reports were provided
+by schools and consist of grades and absences. Grades are evaluated in three periods
+and marked in a 20-point grading scale where 0 is the lowest possible mark and
+20 the highest. The former was used to gather the data for the several demographic,
+social/emotional and school related variables. The final questionnaire containing
+37 questions in a single A4 sheet was answered in class by 788 students. Later
+111 answers were discarded due to lack of identification details. At the end the
+data was merged into two samples that related to Mathematics (395) and
+Portuguese (649) classes.
+
+The merged dataset consist of 13 variables that uniquely identifies
+each row and 20 that describe their performance at one of the subjects. 
+All the features can be split into categorical and numerical ones, but we 
+are rather interested in analyzing the variables rather than the right survey distribution.
+
+```{r}
+index <- c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
+index
+```
+
+
+
+```{r}
+source("read_data.R")
+source("plot_functions.R")
+master_data <- read_data()
+dictionary <- read_excel("dictionary.xlsx")
+```
+
+Let's plot the dependency between grades in Math and Portugese subjects.
+
+```{r}
+ggplot(master_data, aes(G1_m, G1_p)) +
+  geom_point(aes(size = freetime_m)) +
+  geom_smooth() +
+  labs(x = "Grade in Mathematics",
+       y = "Grade in Portugese",
+       title = "Relationship between results in the first period")
+```
+Smaller points in the plot show that students with very little freetime haven't managed to keep excellent results in both subjects and they need to prioritize. 
+# Question 1
+Getting into the weeds of student’s health among two schools might reveal their well-being.
+
+When analyzing the dataset it confused us that there are two separate columns for health.
+We were convinced that this should be gathered only once during the research. The decision was made to check how attending the particular subject influences the responses.
+
+```{r}
+
+health_eq_acc_points <- master_data %>%
+        mutate(health_eq = if_else(health_m == health_p, 1, 0)) %>%
+        group_by(health_m, health_p) %>%
+        summarise(cnt = n())
+
+
+```
+
+
+```{r}
+ggplot(master_data %>%
+               inner_join(health_eq_acc_points),
+       aes(x = health_m, y = health_p, size = cnt)) +
+        scale_size(name   = "",
+                   breaks = c(144, 61, 1),
+                   labels = c('144', '[42, 80]', '[1, 2]')) +
+        geom_point() +
+        labs(y = 'Health reported in the math classes',
+             x = 'Health reported in the portugese classes',
+             title = 'Relationship between reported health at Math and Portguese classess')
+```
+
+
+Most students reported the same health condition in Math and Portuguese classes.
+
+# Question 2
+What kind of support students with each subject? 
+
+```{r barplots}
+
+sum(master_data$paid_m != master_data$paid_p)
+# subject support from family
+
+master_data %>% select(famsup_m,famsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge") +
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain family support?")+
+  xlab(NULL)
+
+# paid support
+master_data %>% select(paid_m,paid_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge")+
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain paid support?")+
+  xlab(NULL)
+
+# school support
+master_data %>% select(schoolsup_m,schoolsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
+  ggplot(aes(x = value, fill = name)) +
+  geom_bar(stat = "count", position = "dodge")+
+  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
+  ggtitle("Does student obtain school support?")+
+  xlab(NULL)
+
+```
+
+
+```{r}
+# better varsion of barplot to answer the quesition MATHS
+
+# create additional variables
+
+master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
+  summarise(n = n(), grade = mean(G3_m)) %>% 
+  arrange(-grade) %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m)) %>% 
+  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
+
+supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
+  summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>% 
+  mutate(cat_name = paste("f",famsup_m,"s",schoolsup_m,"p",paid_m,sep = '_')) %>% 
+  mutate(id = cur_group_id())
+
+tmp_1 <- supp_m  %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m))
+## tiles
+# calculate positions of tiles
+max_n <- 1#max(supp_m$n)
+tile_half_height <- (max_n*1.01)/6
+tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
+
+tiles_df <- data.frame(
+  x = rep(seq(1,8,1), 3),
+  y = rep(tile_y_middles, each = 8)
+)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+
+#maths
+supp_plot_m <- ggplot() +
+  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
+  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
+  scale_x_discrete()+
+  geom_col(data = supp_m, aes(x=cat_name,y=n/sum(n)), alpha = 0.8, width = 0.8, fill = "steelblue")+
+  scale_y_continuous(breaks = seq(0,1, length.out = 5) 
+                    ,sec.axis = sec_axis( ~.,
+                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
+                                          labels = c("Family support","School support", "Paid support")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        panel.background = element_blank(),
+        axis.line.y = element_line())+
+  ylab("Fraction of students")+
+  ggtitle("Maths")
+
+supp_plot_m 
+
 ```
 
 ```{r}
-source("student-merge.R")
+# better varsion of barplot to answer the quesition PORT
+
+# create additional variables
+
+master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
+  summarise(n = n(), grade = mean(G3_p)) %>% 
+  arrange(-grade) %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p)) %>% 
+  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
+
+supp_p <- master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
+  summarise(n = n(), grade = mean(G3_p), .groups = "rowwise") %>% 
+  mutate(cat_name = paste("f",famsup_p,"s",schoolsup_p,"p",paid_p,sep = '_')) %>% 
+  mutate(id = cur_group_id())
+
+tmp_1 <- supp_p  %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p))
+## tiles
+# calculate positions of tiles
+max_n <- max(supp_p$n)
+tile_half_height <- (max_n+2)/6
+tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
+
+tiles_df <- data.frame(
+  x = rep(seq(1,8,1), 3),
+  y = rep(tile_y_middles, each = 8)
+)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+
+
+supp_plot_p <- ggplot() +
+  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
+  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
+  scale_x_discrete()+
+  geom_col(data = supp_p, aes(x=cat_name,y=n), alpha = 0.8, width = 0.8, fill = "steelblue")+
+  scale_y_continuous(breaks = seq(10,max(supp_p$n), length.out = 5) %>% round() 
+                    ,sec.axis = sec_axis( ~.,
+                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
+                                          labels = c("Family support","School support", "Paid support")))+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        panel.background = element_blank(),
+        axis.line.y = element_line())+
+  ylab("Number of students")+
+  ggtitle("Portuguese")
+
+
 ```
+```{r}
+
+supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
+                                          title = '')
+supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p)
+supp_plot_m
+supp_plot_p
+ggarrange(supp_plot_p,supp_plot_m,common.legend = T , legend = "bottom")
+```
+
+# Question 3
+Do students improve their grades during the year?
+
+```{r}
+# attempt 1
+# data
+tmp1 <- master_data %>% 
+  select(matches("G._m")) %>% 
+  drop_na()%>% 
+  mutate(across(everything(),
+                ~cut(.x,breaks = c(-1,7,15,21),
+                    labels = c("low","medium","high")))) %>% 
+  group_by(G1_m,G2_m) %>%
+  summarise(n = n()) %>% 
+  mutate(G1_m = paste0("First ",G1_m),
+         G2_m = paste0("Second ",G2_m)) %>% 
+  arrange(-n)
+
+
+# final plot
+nodes <- data.frame(ID = unique(c(tmp1$G1_m,tmp1$G2_m)),
+                    x = c(rep(1,3),rep(2,3)))
+edges <- data.frame(ID = 1:nrow(tmp1),
+                    N1 = tmp1$G1_m,
+                    N2 = tmp1$G2_m,
+                    Value = tmp1$n)
+cols <- c(low="#00990066",
+medium="#00009966",
+high ="#99000066")
+style <- sapply(nodes$ID, function(id)
+list(col=cols[ gsub("(First|Second) ", "", id) ]), simplify=FALSE)
+
+
+r <- makeRiver(nodes,edges,styles =style) 
+d <- list(srt=0, textcex=1.5) # default style
+plot(r, plot_area=1, nodewidth=10, default_style=d)
+
+```
+
+
+
+```{r}
+grade_per_subject_long <-
+  master_data %>%
+  mutate(row_num = row_number()) %>%
+  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
+  pivot_longer(-row_num) %>%
+  separate(name, c("grade", "subject"))
+```
+```{r}
+subject_pretty_names <- tibble(short_name = c('m', 'p'),
+                               pretty_name = c('Mathematics','Portugese'))
+```
+```{r}
+ggplot(data = grade_per_subject_long %>%
+  inner_join(subject_pretty_names,
+             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
+       aes(y = value, x = pretty_name, fill = period)) +
+  geom_boxplot(show.legend = F) +
+  geom_jitter(width = .3) +
+  ggtitle("Grades from Mathematics and Portugese") +
+  labs(x = "Subject", y = "Grade")
+```
+```{r}
+ggplot(data = grade_per_subject_long %>%
+  inner_join(subject_pretty_names,
+             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
+       aes(y = value, x = factor(pretty_name), fill = factor(period), colour=factor(period))) +
+  geom_boxplot(alpha = 0.6, show.legend = F) +
+  geom_point(position = position_jitterdodge()) +
+  ggtitle("Grades from Mathematics and Portugese") +
+  labs(x = "Subject", y = "Grade", colour = "Period") + guides(fill=FALSE)
+```
+
+```{r}
+grade_per_subject_long <-
+  master_data %>%
+  mutate(row_num = row_number()) %>%
+  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
+  pivot_longer(-row_num) %>%
+  separate(name, c("grade", "subject"))
+```
+
+
+```{r}
+grade_per_subject_long %>%
+  inner_join(subject_pretty_names, by = c("subject" = 'short_name')) %>%
+  ggplot(aes(x = value)) +
+  geom_density() +
+  facet_grid(grade~pretty_name)
+```
+
 
