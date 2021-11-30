@@ -1,19 +1,22 @@
 ---
 title: "AVR"
 output:
-html_document:
-df_print: paged
-toc: yes
-toc_float:
-collapsed: yes
-smooth_scroll: no
+  html_document:
+      df_print: paged
+      toc: yes
+      toc_float: yes
+      collapsed: yes
+      smooth_scroll: no
 bibliography: bibliography.bib
 nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, ggpubr, riverplot)
+
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot)
+options(device = "windows")
+
 ```
 
 # Introduction
@@ -28,18 +31,40 @@ social/emotional and school related variables. The final questionnaire containin
 data was merged into two samples that related to Mathematics (395) and
 Portuguese (649) classes.
 
+The merged dataset consist of 13 variables that uniquely identifies
+each row and 20 that describe their performance at one of the subjects. 
+All the features can be split into categorical and numerical ones, but we 
+are rather interested in analyzing the variables rather than the right survey distribution.
+
+```{r}
+c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
+```
+
+
+
 ```{r}
 source("read_data.R")
 source("plot_functions.R")
 master_data <- read_data()
+dictionary <- read_excel("dictionary.xlsx")
 ```
 
+Let's plot the dependency between grades in Math and Portugese subjects.
+
+```{r}
+ggplot(master_data, aes(G1_m, G1_p)) +
+  geom_point(aes(size = freetime_m)) +
+  geom_smooth() +
+  labs(x = "Grade in Mathematics",
+       y = "Grade in Portugese",
+       title = "Relationship between results in the first period")
+```
+Smaller points in the plot show that students with very little freetime haven't managed to keep excellent results in both subjects and they need to prioritize. 
 # Question 1
 Getting into the weeds of student’s health among two schools might reveal their well-being.
 
 When analyzing the dataset it confused us that there are two separate columns for health.
-We were convinced that this should be gathered only once during the research. We have
-decided to check how sitting in the particular subject influences the responses.
+We were convinced that this should be gathered only once during the research. The decision was made to check how attending the particular subject influences the responses.
 
 ```{r}
 
@@ -48,7 +73,9 @@ health_eq_acc_points <- master_data %>%
         group_by(health_m, health_p) %>%
         summarise(cnt = n())
 
+
 ```
+
 
 ```{r}
 ggplot(master_data %>%
@@ -246,5 +273,35 @@ plot(r, plot_area=1, nodewidth=10, default_style=d)
 ```
 
 
+
+```{r}
+grade_per_subject_long <-
+  master_data %>%
+  mutate(row_num = row_number()) %>%
+  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
+  pivot_longer(-row_num) %>%
+  separate(name, c("grade", "subject"))
+```
+
+```{r}
+ggplot(data = grade_per_subject_long %>%
+  inner_join(subject_pretty_names,
+             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
+       aes(y = value, x = pretty_name, fill = period)) +
+  geom_boxplot(show.legend = F) +
+  geom_jitter(width = .3) +
+  ggtitle("Grades from Mathematics and Portugese") +
+  labs(x = "Subject", y = "Grade")
+```
+```{r}
+ggplot(data = grade_per_subject_long %>%
+  inner_join(subject_pretty_names,
+             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
+       aes(y = value, x = factor(pretty_name), fill = factor(period), colour=factor(period))) +
+  geom_boxplot(alpha = 0.6, show.legend = F) +
+  geom_point(position = position_jitterdodge()) +
+  ggtitle("Grades from Mathematics and Portugese") +
+  labs(x = "Subject", y = "Grade", colour = "Period") + guides(fill=FALSE)
+```
 
 # References
