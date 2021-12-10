@@ -13,10 +13,8 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid)
 options(device = "windows")
-
 ```
 
 # Introduction
@@ -285,6 +283,12 @@ grade_per_subject_long <-
 ```
 
 ```{r}
+subject_pretty_names <- tibble(short_name = c('m', 'p'),
+                               pretty_name = c('Mathematics','Portugese'))
+```
+
+
+```{r}
 ggplot(data = grade_per_subject_long %>%
   inner_join(subject_pretty_names,
              by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
@@ -332,6 +336,13 @@ to the subsequent periods results'.
 
 
 ```{r}
+grade_per_subject_long <-
+  master_data %>%
+  mutate(row_num = row_number()) %>%
+  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
+  pivot_longer(-row_num) %>%
+  separate(name, c("grade", "subject"))
+
 absences.agg <- master_data %>%
   group_by(freetime_m, goout_m) %>%
   summarise(across(absences_m, ~n()))
@@ -351,8 +362,7 @@ absences.agg.to.plot.m <- absences.agg %>%
   inner_join(low.high.map,
              by = c("goout_m" = "ugly_level")) %>%
   rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_m)
-# Best way to present two way distribution is heatmap. In R we can achieve it with
-# geom_tile()
+
 absences.m.plot <-
   ggplot(absences.agg.to.plot.m, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
   geom_tile(aes(fill = absences_m), color = 'white', show.legend = F) +
@@ -373,7 +383,17 @@ low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
                                         'medium',
                                         'high',
                                         'very high'))
+```
 
+```{r}
+grade_per_subject_long %>%
+  inner_join(subject_pretty_names, by = c("subject" = 'short_name')) %>%
+  ggplot(aes(x = value)) +
+  geom_density() +
+  facet_grid(grade~pretty_name)
+```
+
+```{r}
 absences.agg.to.plot.p <- absences.agg %>%
   ungroup() %>%
   inner_join(low.high.map,
@@ -382,9 +402,10 @@ absences.agg.to.plot.p <- absences.agg %>%
   inner_join(low.high.map,
              by = c("goout_p" = "ugly_level")) %>%
   rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_p)
-# Best way to present two way distribution is heatmap. In R we can achieve it with
-# geom_tile()
+```
 
+
+```{r}
 absences.p.plot <-
 ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
   geom_tile(aes(fill = absences_p), color = 'white', show.legend = F) +
