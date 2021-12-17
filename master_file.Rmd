@@ -428,4 +428,54 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 )
 
 ```
+
+
+# Question 4
+How family situation influences grades?
+
+```{r}
+tmp1 <-   master_data %>% 
+  group_by(Medu,Fedu,Pstatus) %>% 
+  summarise(avg_grade_m = mean(G3_m) %>% round(2),
+            avg_grade_p = mean(G3_p) %>% round(2) 
+            ) %>% 
+  mutate(grades = paste("Math:",avg_grade_m,"\nPort.:",avg_grade_p)) 
+
+master_data %>% 
+ggplot()+
+  geom_bin2d(aes(as.factor(Medu),as.factor(Fedu), fill = ..count../nrow(master_data)))+
+  labs(x = "mother's education",
+       y = "father's education",
+       fill = "% of students",
+       title = "Average grades of students given their parents education")+
+  scale_x_discrete(labels = c('none',
+                              '4th grade',
+                              '5th to 9th grade',
+                              'secondary education',
+                              ' higher education' ))+
+    scale_y_discrete(labels = c('none',
+                              '4th grade',
+                              '5th to 9th grade',
+                              'secondary education',
+                              ' higher education' ))+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust=0.5)) + 
+  geom_text(data = tmp1,aes(as.factor(Medu),as.factor(Fedu),label =grades),
+            color = "white")+
+  facet_wrap(.~Pstatus, labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))
+  
+  master_data %>% 
+  ggplot(aes(x=famrel_m,y=G3_m))+
+    geom_point()+
+    geom_smooth()
+  
+   master_data %>% 
+  ggplot(aes(x=famrel_p,y=G3_p))+
+    geom_point()+
+    geom_smooth()
+
+
+
+```
+
+
 # References
