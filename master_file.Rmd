@@ -15,6 +15,7 @@ nocite: '@*'
 knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid)
 options(device = "windows")
+setwd("C:\\Users\\Mateusz\\OneDrive\\Dokumenty\\GitHub\\grrrades")
 ```
 
 # Introduction
@@ -422,10 +423,86 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
                          ncol = 2),
              nrow = 2,
              heights = c(10, 1), # relative height of two rows
-             top = textGrob("Consideration of the spare time might be an indicator for the number of absences.", vjust = 1, gp = gpar(fontface = "bold", cex = 1.5)),
+             top = textGrob("Spare time by the number of absences.", vjust = 1, gp = gpar(fontface = "bold", cex = 1.5)),
              left = textGrob("Free time after school", rot = 90, vjust = 1),
              bottom = textGrob("Going out with friends", rot = 0, vjust = -2)
 )
 
 ```
+# Question 4
+Does relationship status influence a number of absences?
+
+```{r}
+absences_by_romantic_status_m <-
+  master_data %>%
+  group_by(romantic_m) %>%
+  summarise(count = n(), mean_absences = mean(absences_m))
+absences_by_romantic_status_to_plot_m <- absences_by_romantic_status_m %>% 
+  pivot_longer(cols = count) %>% 
+  rename(label = romantic_m, ymax = mean_absences, xmax = value) %>% 
+  mutate( ymin = 0) %>% 
+  select(-name) %>% 
+  select(ymin, xmax, ymax, label) %>% 
+  mutate(xmax = cumsum(xmax), xmin = lag(xmax, default = 0)) %>% 
+  select(xmin, ymin, xmax, ymax, label)
+
+absences_by_romantic_status_p <-
+  master_data %>%
+  group_by(romantic_p) %>%
+  summarise(count = n(), mean_absences = mean(absences_p))
+absences_by_romantic_status_to_plot_p <- absences_by_romantic_status_p %>% 
+  pivot_longer(cols = count) %>% 
+  rename(label = romantic_p, ymax = mean_absences, xmax = value) %>% 
+  mutate( ymin = 0) %>% 
+  select(-name) %>% 
+  select(ymin, xmax, ymax, label) %>% 
+  mutate(xmax = cumsum(xmax), xmin = lag(xmax, default = 0)) %>% 
+  select(xmin, ymin, xmax, ymax, label)
+```
+```{r}
+absences_by_romantic_status_plot_p <- ggplot(absences_by_romantic_status_to_plot_p) +
+  geom_rect(aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax, fill = (xmax - xmin)*(ymax - ymin)),
+            color = 'grey78', alpha = .7) +
+  theme_minimal() +
+  theme(legend.position = 'top') +
+  geom_label(aes(y = ymax, label = (xmax - xmin)*(ymax - ymin),
+                 x = xmin + (xmax - xmin)/2), size = 8) +
+  geom_label(aes(y = 1, x = xmin + (xmax - xmin)/2,
+                 label = c("Single",
+                           "In relationship"))) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  ggtitle('Portugese')
+  scale_fill_viridis_c(guide = guide_colorbar(barwidth = 20)) 
+absences_by_romantic_status_plot_m <- ggplot(absences_by_romantic_status_to_plot_m) +
+  geom_rect(aes(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax, fill = (xmax - xmin)*(ymax - ymin)),
+            color = 'grey78', alpha = .7) +
+  theme_minimal() +
+  theme(legend.position = 'top') +
+  geom_label(aes(y = ymax, label = (xmax - xmin)*(ymax - ymin),
+                 x = xmin + (xmax - xmin)/2), size = 8) +
+  geom_label(aes(y = 1, x = xmin + (xmax - xmin)/2,
+                 label = c("Single",
+                           "In relationship"))) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  ggtitle('Mathematics') +
+  scale_fill_viridis_c(guide = guide_colorbar(barwidth = 20)) 
+```
+
+```{r}
+grid.arrange(arrangeGrob(absences_by_romantic_status_plot_p + theme(legend.position = "none"),
+                         absences_by_romantic_status_plot_m + theme(legend.position = "none"),
+                         ncol = 2),
+             nrow = 2,
+             heights = c(10, 1), # relative height of two rows
+             top = textGrob("Absences by romantic relationship status.", vjust = 1, gp = gpar(fontface = "bold", cex = 1.5)),
+             left = textGrob("Free time after school", rot = 90, vjust = 1),
+             bottom = textGrob("Going out with friends", rot = 0, vjust = -2)
+)
+```
+
+
 # References
