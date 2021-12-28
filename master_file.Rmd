@@ -13,7 +13,7 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid,ggstance)
 options(device = "windows")
 ```
 
