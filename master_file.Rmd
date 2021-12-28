@@ -13,8 +13,8 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify)
-options(device = "windows")
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar)
+# options(device = "windows")
 ```
 
 # Introduction
@@ -500,4 +500,26 @@ ggplot(pass_fail_association_aggregate,
   scale_fill_gradient(guide = guide_colorbar(barheight = 20))
 ```
 
+# Question 7
+```{r}
+all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
+dims <- paste0(all_numeric_var[4:11], "_m")
+dims <- append(dims, "G3_m")
+final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
+```
+
+
+
+```{r}
+master_data_to_radar <- master_data %>%
+    mutate(across(final_dims, scales::rescale)) %>%
+    group_by(higher_m) %>%
+    summarise(across(final_dims, ~mean(.)))
+```
+```{r}
+names(master_data_to_radar) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
+```
+```{r}
+ggradar(master_data_to_radar)
+```
 # References
