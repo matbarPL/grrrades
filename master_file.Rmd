@@ -13,7 +13,7 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance)
 # options(device = "windows")
 ```
 
@@ -401,9 +401,6 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 
 ```
 
-
-
-
 # Question 6
 Does relationship status influence a number of absences?
 
@@ -501,7 +498,7 @@ ggplot(pass_fail_association_aggregate,
   scale_fill_gradient(guide = guide_colorbar(barheight = 20))
 ```
 
-# Question 7
+# Question 8
 ```{r}
 all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
 dims <- paste0(all_numeric_var[4:11], "_m")
@@ -523,8 +520,8 @@ names(master_data_to_radar) <- c("wants to take higher education", "workday alco
 ```{r}
 ggradar(master_data_to_radar)
 ```
-=======
-# Question 6
+
+# Question 9
 Are there gender differences in grades?
 
 ```{r}
