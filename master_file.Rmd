@@ -13,8 +13,8 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid,ggstance)
-options(device = "windows")
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance)
+# options(device = "windows")
 ```
 
 # Introduction
@@ -59,8 +59,10 @@ ggplot(master_data, aes(G1_m, G1_p)) +
        title = "Relationship between results in the first period")
 ```
 Smaller points in the plot show that students with very little freetime haven't managed to keep excellent results in both subjects and they need to prioritize. 
+
 # Question 1
-Getting into the weeds of student’s health among two schools might reveal their well-being.
+
+What is the distribution of the health reported during both classes.
 
 When analyzing the dataset it confused us that there are two separate columns for health.
 We were convinced that this should be gathered only once during the research. The decision was made to check how attending the particular subject influences the responses.
@@ -272,6 +274,8 @@ plot(r, plot_area=1, nodewidth=10, default_style=d)
 ```
 
 
+# Question 4
+What is the distribution of grades across subjects and grades in the current period?
 
 ```{r}
 grade_per_subject_long <-
@@ -288,16 +292,6 @@ subject_pretty_names <- tibble(short_name = c('m', 'p'),
 ```
 
 
-```{r}
-ggplot(data = grade_per_subject_long %>%
-  inner_join(subject_pretty_names,
-             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
-       aes(y = value, x = pretty_name, fill = period)) +
-  geom_boxplot(show.legend = F) +
-  geom_jitter(width = .3) +
-  ggtitle("Grades from Mathematics and Portugese") +
-  labs(x = "Subject", y = "Grade")
-```
 ```{r}
 ggplot(data = grade_per_subject_long %>%
   inner_join(subject_pretty_names,
@@ -309,30 +303,15 @@ ggplot(data = grade_per_subject_long %>%
   labs(x = "Subject", y = "Grade", colour = "Period") + guides(fill=FALSE)
 ```
 
-```{r}
-grade_per_subject_long <-
-  master_data %>%
-  mutate(row_num = row_number()) %>%
-  select(row_num, starts_with("G", ignore.case = FALSE)) %>%
-  pivot_longer(-row_num) %>%
-  separate(name, c("grade", "subject"))
-```
 
-```{r}
-subject_pretty_names <- tibble(short_name = c('m', 'p'),
-                               pretty_name = c('Mathematics','Portugese'))
-```
-```{r}
-grade_per_subject_long %>%
-  inner_join(subject_pretty_names, by = c("subject" = 'short_name')) %>%
-  ggplot(aes(x = value)) +
-  geom_density() +
-  facet_grid(grade~pretty_name)
-```
 
 Grades for Portugese were consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
 to the subsequent periods results'.
+
+# Question 5
+How the amount of spare time and the way of spending it influence
+the number of absences.
 
 
 ```{r}
@@ -385,13 +364,6 @@ low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
                                         'very high'))
 ```
 
-```{r}
-grade_per_subject_long %>%
-  inner_join(subject_pretty_names, by = c("subject" = 'short_name')) %>%
-  ggplot(aes(x = value)) +
-  geom_density() +
-  facet_grid(grade~pretty_name)
-```
 
 ```{r}
 absences.agg.to.plot.p <- absences.agg %>%
@@ -429,7 +401,127 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 
 ```
 
+# Question 6
+Does relationship status influence a number of absences?
+
+```{r}
+tmp1 <-   master_data %>% 
+  group_by(Medu,Fedu,Pstatus) %>% 
+  summarise(avg_grade_m = mean(G3_m) %>% round(2),
+            avg_grade_p = mean(G3_p) %>% round(2) 
+            ) %>% 
+  mutate(grades = paste("Math:",avg_grade_m,"\nPort.:",avg_grade_p)) 
+
+master_data %>% 
+ggplot()+
+  geom_bin2d(aes(as.factor(Medu),as.factor(Fedu), fill = ..count../nrow(master_data)))+
+  labs(x = "mother's education",
+       y = "father's education",
+       fill = "% of students",
+       title = "Average grades of students given their parents education")+
+  scale_x_discrete(labels = c('none',
+                              '4th grade',
+                              '5th to 9th grade',
+                              'secondary education',
+                              ' higher education' ))+
+    scale_y_discrete(labels = c('none',
+                              '4th grade',
+                              '5th to 9th grade',
+                              'secondary education',
+                              ' higher education' ))+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust=0.5)) + 
+  geom_text(data = tmp1,aes(as.factor(Medu),as.factor(Fedu),label =grades),
+            color = "white")+
+  facet_wrap(.~Pstatus, labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))
+  
+  master_data %>% 
+  ggplot(aes(x=famrel_m,y=G3_m))+
+    geom_point()+
+    geom_smooth()
+  
+   master_data %>% 
+  ggplot(aes(x=famrel_p,y=G3_p))+
+    geom_point()+
+    geom_smooth()
+
+
+
+```
+# Question 7
+```{r}
+pass_fail_association <- master_data %>%
+  mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
+         current_failure_p = if_else(G3_p >= 10, 1, 0),
+         failures_m_general = if_else(failures_m > 0, 1, 0),
+         failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
+  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>%
+  count()
+pass_fail_association$group <- c("Rockstars",
+                                 "Accidents will happen",
+                                 "Accidents will happen",
+                                 "Achilles' heel",
+                                 "Achilles' heel",
+                                 "Accidents will happen",
+                                 "Accepting trade-off",
+                                 "Rockstars",
+                                 "Misery loves company",
+                                 "Achilles' heel",
+                                 "Achilles' heel",
+                                 "Misery loves company",
+                                 "Misery loves company")
+pass_fail_association_aggregate <- pass_fail_association %>%
+  group_by(group) %>%
+  summarise(student_count = sum(n))
+```
+
+We created five groups that describe the consistency of the students' performance across periods.
+
+- Accidents will happen describe a group of people that generally pass both Mathematics and Portugese subjects but have experiences at least one failure.
+
+- With the Achilles' heel we associate guys that consequently have problem with passing either Mathematics or Portugese.
+
+- The Rockstars have been depicted as the students that either are the gifted ones and pass both subjects consequently or after failing both previously now passed them.
+
+- With the mistery loves company description we try to motivate the folks that have issues with learning at school and consequently experience problems at school.
+
+- Accepting trade-off relate to the students that sacrifice one subject for the sake of the other.
+
+```{r}
+ggplot(pass_fail_association_aggregate,
+       aes(area = student_count,
+           label = group,
+       fill = student_count)) +
+  geom_treemap() +
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre",
+                    grow = F) +
+  labs(title = "Consistency of pass/failure across years") +
+  scale_fill_gradient(guide = guide_colorbar(barheight = 20))
+```
+
 # Question 8
+```{r}
+all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
+dims <- paste0(all_numeric_var[4:11], "_m")
+dims <- append(dims, "G3_m")
+final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
+```
+
+
+
+```{r}
+master_data_to_radar <- master_data %>%
+    mutate(across(final_dims, scales::rescale)) %>%
+    group_by(higher_m) %>%
+    summarise(across(final_dims, ~mean(.)))
+```
+```{r}
+names(master_data_to_radar) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
+```
+```{r}
+ggradar(master_data_to_radar)
+```
+
+# Question 9
 Are there gender differences in grades?
 
 ```{r}
@@ -488,6 +580,7 @@ master_data %>%
     ggplot(data = helper_df_2)+
     geom_col(data = helper_df_2,aes(x = 100,y = value,fill = name),width = 0.4)
 ```
+
 
 
 
