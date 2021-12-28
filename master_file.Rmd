@@ -429,7 +429,7 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 
 ```
 
-# Question 6
+# Question 8
 Are there gender differences in grades?
 
 ```{r}
