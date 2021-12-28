@@ -428,4 +428,67 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 )
 
 ```
+
+# Question 6
+Are there gender differences in grades?
+
+```{r}
+# calculate percentages
+helper_df <- master_data %>%
+  # mutate(fake_id = 1) %>% 
+  # group_by(fake_id) %>% 
+  summarise(mop = sum(G3_m>G3_p),
+            pom = sum(G3_m<G3_p),
+            fmop = sum((G3_m>G3_p) & sex == 'F'),
+            fpom = sum((G3_m<G3_p) & sex == 'F')) %>% 
+  mutate(fmop_perc = fmop/mop, mmop_perc = 1-fmop_perc,
+         fpom_perc = fpom/pom, mpom_perc = 1-fpom_perc,
+         mop_perc = mop/(mop+pom),
+         pom_perc = 1- mop_perc)
+
+helper_df_2 <- helper_df %>% 
+  pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
+  select(c(name,value)) %>% 
+  .[1:2,]
+
+helper_df_3 <- helper_df %>% 
+  pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
+  select(c(name,value)) %>% 
+  .[3:4,]
+                                                       
+master_data %>% 
+  #pivot_longer(c(G3_m,G3_p)) %>% 
+  ggplot()+
+  geom_colh(data = helper_df_2,aes(y = -1,x = 20*value,fill = name),width = 1,
+             position = "stackv")+
+  geom_col(data = helper_df_3,aes(x = -1,y = 20*value,fill = name),width = 1,
+             position = "stack")+
+  geom_point(aes(x=G3_m,y=G3_p,color = sex),
+             size = 3,
+             position=position_dodge(width=0.3))+
+  geom_abline(slope = 1,intercept = 0)+
+  annotate("text",label = paste("Better portuguese \nthan maths:\n",
+                                round(helper_df$pom_perc*100),
+                                "% of all"),
+           x =5.5, y =17)+
+  annotate("text",
+           label = paste("Better maths \nthan portuguese:\n",
+                        round(helper_df$mop_perc*100),
+                        "% of all"),
+           x =17, y =3) +
+  scale_fill_manual(values = c("#F8766D", "#F8766D","#00BFC4", "#00BFC4"),
+                    )+
+  guides(fill="none")+
+  scale_color_manual(values = c("#F8766D", "#00BFC4"),labels = c("female","male"))+
+  coord_fixed()
+  
+  
+
+   
+    ggplot(data = helper_df_2)+
+    geom_col(data = helper_df_2,aes(x = 100,y = value,fill = name),width = 0.4)
+```
+
+
+
 # References
