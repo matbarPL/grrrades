@@ -319,9 +319,7 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 
 ```
 
-
 # Question 5
-
 Does relationship status influence a number of absences?
 
 ```{r}
@@ -409,7 +407,6 @@ ggplot(pass_fail_association_aggregate,
 ```
 
 # Question 7
-
 ```{r}
 groups_mean_absences <- master_data %>%
   mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
