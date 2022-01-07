@@ -1,5 +1,7 @@
 ---
-title: "AVR"
+title: "Advanced Visualization in R"
+subtitle: explore relationships between students' performance
+author: "Wojciech Maślakiewicz & Mateusz Baryła"
 output:
   html_document:
       df_print: paged
@@ -12,9 +14,8 @@ nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar)
-# options(device = "windows")
+knitr::opts_chunk$set(echo = TRUE, out.width="100%")
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance, ggpubr)
 ```
 
 # Introduction
@@ -48,95 +49,12 @@ master_data <- read_data()
 dictionary <- read_excel("dictionary.xlsx")
 ```
 
-Let's plot the dependency between grades in Math and Portugese subjects.
-
-```{r}
-ggplot(master_data, aes(G1_m, G1_p)) +
-  geom_point(aes(size = freetime_m)) +
-  geom_smooth() +
-  labs(x = "Grade in Mathematics",
-       y = "Grade in Portugese",
-       title = "Relationship between results in the first period")
-```
-Smaller points in the plot show that students with very little freetime haven't managed to keep excellent results in both subjects and they need to prioritize. 
-
 # Question 1
+What kind of support students with each subject?
 
-What is the distribution of the health reported during both classes.
-
-When analyzing the dataset it confused us that there are two separate columns for health.
-We were convinced that this should be gathered only once during the research. The decision was made to check how attending the particular subject influences the responses.
+## Code
 
 ```{r}
-
-health_eq_acc_points <- master_data %>%
-        mutate(health_eq = if_else(health_m == health_p, 1, 0)) %>%
-        group_by(health_m, health_p) %>%
-        summarise(cnt = n())
-
-
-```
-
-
-```{r}
-ggplot(master_data %>%
-               inner_join(health_eq_acc_points),
-       aes(x = health_m, y = health_p, size = cnt)) +
-        scale_size(name   = "",
-                   breaks = c(144, 61, 1),
-                   labels = c('144', '[42, 80]', '[1, 2]')) +
-        geom_point() +
-        labs(y = 'Health reported in the math classes',
-             x = 'Health reported in the portugese classes',
-             title = 'Relationship between reported health at Math and Portguese classess')
-```
-
-
-Most students reported the same health condition in Math and Portuguese classes.
-
-# Question 2
-What kind of support students with each subject? 
-
-```{r barplots}
-
-sum(master_data$paid_m != master_data$paid_p)
-# subject support from family
-
-master_data %>% select(famsup_m,famsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
-  ggplot(aes(x = value, fill = name)) +
-  geom_bar(stat = "count", position = "dodge") +
-  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
-  ggtitle("Does student obtain family support?")+
-  xlab(NULL)
-
-# paid support
-master_data %>% select(paid_m,paid_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
-  ggplot(aes(x = value, fill = name)) +
-  geom_bar(stat = "count", position = "dodge")+
-  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
-  ggtitle("Does student obtain paid support?")+
-  xlab(NULL)
-
-# school support
-master_data %>% select(schoolsup_m,schoolsup_p) %>% mutate(n=1) %>% pivot_longer(!n) %>% 
-  ggplot(aes(x = value, fill = name)) +
-  geom_bar(stat = "count", position = "dodge")+
-  scale_fill_discrete(name = "Subject", labels = c("Maths", "Portuguese"))+
-  ggtitle("Does student obtain school support?")+
-  xlab(NULL)
-
-```
-
-
-```{r}
-# better varsion of barplot to answer the quesition MATHS
-
-# create additional variables
-
-master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
-  summarise(n = n(), grade = mean(G3_m)) %>% 
-  arrange(-grade) %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m)) %>% 
-  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
 
 supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
   summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>% 
@@ -172,9 +90,10 @@ supp_plot_m <- ggplot() +
         axis.line.y = element_line())+
   ylab("Fraction of students")+
   ggtitle("Maths")
-
-supp_plot_m 
-
+```
+## Plot
+```{r, echo = FALSE}
+supp_plot_m
 ```
 
 ```{r}
@@ -229,12 +148,10 @@ supp_plot_p <- ggplot() +
 supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
                                           title = '')
 supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p)
-supp_plot_m
-supp_plot_p
 ggarrange(supp_plot_p,supp_plot_m,common.legend = T , legend = "bottom")
 ```
 
-# Question 3
+# Question 2
 Do students improve their grades during the year?
 
 ```{r}
@@ -274,7 +191,7 @@ plot(r, plot_area=1, nodewidth=10, default_style=d)
 ```
 
 
-# Question 4
+# Question 3
 What is the distribution of grades across subjects and grades in the current period?
 
 ```{r}
@@ -309,7 +226,8 @@ Grades for Portugese were consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
 to the subsequent periods results'.
 
-# Question 5
+# Question 4
+
 How the amount of spare time and the way of spending it influence
 the number of absences.
 
@@ -402,9 +320,8 @@ grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
 ```
 
 
+# Question 5
 
-
-# Question 6
 Does relationship status influence a number of absences?
 
 ```{r}
@@ -436,29 +353,19 @@ ggplot()+
   geom_text(data = tmp1,aes(as.factor(Medu),as.factor(Fedu),label =grades),
             color = "white")+
   facet_wrap(.~Pstatus, labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))
-  
-  master_data %>% 
-  ggplot(aes(x=famrel_m,y=G3_m))+
-    geom_point()+
-    geom_smooth()
-  
-   master_data %>% 
-  ggplot(aes(x=famrel_p,y=G3_p))+
-    geom_point()+
-    geom_smooth()
-
-
-
 ```
-# Question 7
+
+# Question 6
+
+Is there any association between students' performance across terms and subjects?
+
 ```{r}
 pass_fail_association <- master_data %>%
   mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
          current_failure_p = if_else(G3_p >= 10, 1, 0),
          failures_m_general = if_else(failures_m > 0, 1, 0),
          failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
-  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>%
-  count()
+  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>% count()
 pass_fail_association$group <- c("Rockstars",
                                  "Accidents will happen",
                                  "Accidents will happen",
@@ -502,29 +409,77 @@ ggplot(pass_fail_association_aggregate,
 ```
 
 # Question 7
+
+```{r}
+groups_mean_absences <- master_data %>%
+  mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
+         current_failure_p = if_else(G3_p >= 10, 1, 0),
+         failures_m_general = if_else(failures_m > 0, 1, 0),
+         failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
+  mutate(mean_absences = (absences_m + absences_p)/2) %>%
+  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>% summarise(across(mean_absences, ~mean(.)))
+
+groups_mean_absences$group <- c("Rockstars",
+                                 "Accidents will happen",
+                                 "Accidents will happen",
+                                 "Achilles' heel",
+                                 "Achilles' heel",
+                                 "Accidents will happen",
+                                 "Accepting trade-off",
+                                 "Rockstars",
+                                 "Misery loves company",
+                                 "Achilles' heel",
+                                 "Achilles' heel",
+                                 "Misery loves company",
+                                 "Misery loves company")
+groups_mean_absences %>%
+  group_by(group) %>%
+  summarise(across(mean_absences, list(median = ~median(.)))) %>%
+  ggdotchart(x = "group", y = "mean_absences_median",
+           palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+           sorting = "descending",
+           rotate = TRUE,
+           dot.size = 2,
+           y.text.col = TRUE) +
+  theme_cleveland()
+```
+
+# Question 8
+
+What is the impact of students' lifestyle for their performance?
+
 ```{r}
 all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
 dims <- paste0(all_numeric_var[4:11], "_m")
 dims <- append(dims, "G3_m")
 final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
-```
-
-
-
-```{r}
 master_data_to_radar <- master_data %>%
     mutate(across(final_dims, scales::rescale)) %>%
     group_by(higher_m) %>%
     summarise(across(final_dims, ~mean(.)))
-```
-```{r}
 names(master_data_to_radar) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
+
+all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
+dims <- paste0(all_numeric_var[4:11], "_p")
+
+
+
+
+dims <- append(dims, "G3_p")
+final_dims <- c("Dalc_p", "Walc_p", "studytime_p", "absences_p", "G3_p")
+master_data_to_radar_p <- master_data %>%
+  mutate(across(final_dims, scales::rescale)) %>%
+  group_by(higher_p) %>%
+  summarise(across(final_dims, ~mean(.)))
+names(master_data_to_radar_p) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
 ```
-```{r}
-ggradar(master_data_to_radar)
+```{r, out.width="100%"}
+grid.arrange(ggradar(master_data_to_radar), ggradar(master_data_to_radar_p),
+             ncol = 2)
 ```
-=======
-# Question 6
+
+# Question 9
+
 Are there gender differences in grades?
 
 ```{r}
@@ -576,15 +531,6 @@ master_data %>%
   guides(fill="none")+
   scale_color_manual(values = c("#F8766D", "#00BFC4"),labels = c("female","male"))+
   coord_fixed()
-  
-  
-
-   
-    ggplot(data = helper_df_2)+
-    geom_col(data = helper_df_2,aes(x = 100,y = value,fill = name),width = 0.4)
 ```
-
-
-
 
 # References
