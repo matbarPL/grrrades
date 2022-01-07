@@ -13,7 +13,8 @@ nocite: '@*'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance,
+               ggthemes,ggcharts)
 # options(device = "windows")
 ```
 
@@ -582,6 +583,31 @@ master_data %>%
 ```
 
 
+```{r}
 
+
+
+master_data %>% 
+  group_by(age,sex) %>% 
+  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
+  filter(age<=19) %>% 
+  #pivot_longer(-c(age,sex)) %>% 
+  
+pyramid_chart( x = age, y = grade_m, group = sex,
+               xlab = "grade", title = "Maths grade by age and gender")
+  
+  
+
+master_data %>% 
+  group_by(age,sex) %>% 
+  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
+  #pivot_longer(-c(age,sex)) %>% 
+    filter(age<=19) %>% 
+pyramid_chart( x = age, y = grade_p, group = sex,
+               xlab = "grade", title = "Portuguese grade by age and gender")
+
+
+  
+```
 
 # References
