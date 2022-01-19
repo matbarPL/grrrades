@@ -1,6 +1,6 @@
 ---
 title: "Advanced Visualization in R"
-subtitle: explore relationships between students' performance
+subtitle: Using advanced visualization techniques to explore relationships between students' characteristics & performance.
 author: "Wojciech Maślakiewicz & Mateusz Baryła"
 output:
   html_document:
@@ -14,9 +14,12 @@ nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, out.width="100%")
-pacman::p_load(tidyverse, readxl, ggpubr, riverplot, gridExtra, grid, tidyverse, treemapify, ggradar, ggstance,
-               ggthemes,ggcharts)
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, readxl, ggpubr, riverplot,
+               gridExtra, grid, tidyverse, treemapify,
+               ggradar, ggstance, ggthemes,ggcharts)
+color_palette <- tibble(colors = c("#F5F5F5", "#F05454", "#30475E", "#121212"),
+                        color_names = c("grey", "red", "blue", "black"))
 ```
 
 # Introduction
@@ -29,21 +32,14 @@ social/emotional and school related variables. The final questionnaire containin
 37 questions in a single A4 sheet was answered in class by 788 students. Later
 111 answers were discarded due to lack of identification details. At the end the
 data was merged into two samples that related to Mathematics (395) and
-Portuguese (649) classes.
+Portuguese (649) classes [@Cortez2008].
 
 The merged dataset consist of 13 variables that uniquely identifies
-each row and 20 that describe their performance at one of the subjects. 
-All the features can be split into categorical and numerical ones, but we 
-are rather interested in analyzing the variables rather than the right survey distribution.
+each row and 20 that describe their performance at one of the subjects.
+All the features can be split into categorical and numerical ones, but we
+are rather interested in analyzing the variables rather than the right survey distribution [@Dua:2019].
 
-```{r}
-index <- c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet")
-index
-```
-
-
-
-```{r}
+```{r, echo = FALSE}
 source("read_data.R")
 source("plot_functions.R")
 master_data <- read_data()
@@ -53,13 +49,11 @@ dictionary <- read_excel("dictionary.xlsx")
 # Question 1
 What kind of support students with each subject?
 
-## Code
-
 ```{r}
 
-supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>% 
-  summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>% 
-  mutate(cat_name = paste("f",famsup_m,"s",schoolsup_m,"p",paid_m,sep = '_')) %>% 
+supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>%
+  summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>%
+  mutate(cat_name = paste("f",famsup_m,"s",schoolsup_m,"p",paid_m,sep = '_')) %>%
   mutate(id = cur_group_id())
 
 tmp_1 <- supp_m  %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m))
@@ -72,7 +66,7 @@ tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
 tiles_df <- data.frame(
   x = rep(seq(1,8,1), 3),
   y = rep(tile_y_middles, each = 8)
-)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+)%>% arrange(x) %>% mutate(z = tmp_1$value)
 
 #maths
 supp_plot_m <- ggplot() +
@@ -80,7 +74,7 @@ supp_plot_m <- ggplot() +
   scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
   scale_x_discrete()+
   geom_col(data = supp_m, aes(x=cat_name,y=n/sum(n)), alpha = 0.8, width = 0.8, fill = "steelblue")+
-  scale_y_continuous(breaks = seq(0,1, length.out = 5) 
+  scale_y_continuous(breaks = seq(0,1, length.out = 5)
                     ,sec.axis = sec_axis( ~.,
                                           breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
                                           labels = c("Family support","School support", "Paid support")))+
@@ -92,7 +86,7 @@ supp_plot_m <- ggplot() +
   ylab("Fraction of students")+
   ggtitle("Maths")
 ```
-## Plot
+
 ```{r, echo = FALSE}
 supp_plot_m
 ```
@@ -102,19 +96,17 @@ supp_plot_m
 
 # create additional variables
 
-master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
-  summarise(n = n(), grade = mean(G3_p)) %>% 
-  arrange(-grade) %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p)) %>% 
+master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>%
+  summarise(n = n(), grade = mean(G3_p)) %>%
+  arrange(-grade) %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p)) %>%
   mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
 
-supp_p <- master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>% 
-  summarise(n = n(), grade = mean(G3_p), .groups = "rowwise") %>% 
-  mutate(cat_name = paste("f",famsup_p,"s",schoolsup_p,"p",paid_p,sep = '_')) %>% 
+supp_p <- master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>%
+  summarise(n = n(), grade = mean(G3_p), .groups = "rowwise") %>%
+  mutate(cat_name = paste("f",famsup_p,"s",schoolsup_p,"p",paid_p,sep = '_')) %>%
   mutate(id = cur_group_id())
 
 tmp_1 <- supp_p  %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p))
-## tiles
-# calculate positions of tiles
 max_n <- max(supp_p$n)
 tile_half_height <- (max_n+2)/6
 tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
@@ -122,7 +114,7 @@ tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
 tiles_df <- data.frame(
   x = rep(seq(1,8,1), 3),
   y = rep(tile_y_middles, each = 8)
-)%>% arrange(x) %>% mutate(z = tmp_1$value) 
+)%>% arrange(x) %>% mutate(z = tmp_1$value)
 
 
 supp_plot_p <- ggplot() +
@@ -130,7 +122,7 @@ supp_plot_p <- ggplot() +
   scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
   scale_x_discrete()+
   geom_col(data = supp_p, aes(x=cat_name,y=n), alpha = 0.8, width = 0.8, fill = "steelblue")+
-  scale_y_continuous(breaks = seq(10,max(supp_p$n), length.out = 5) %>% round() 
+  scale_y_continuous(breaks = seq(10,max(supp_p$n), length.out = 5) %>% round()
                     ,sec.axis = sec_axis( ~.,
                                           breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
                                           labels = c("Family support","School support", "Paid support")))+
@@ -158,16 +150,16 @@ Do students improve their grades during the year?
 ```{r}
 # attempt 1
 # data
-tmp1 <- master_data %>% 
-  select(matches("G._m")) %>% 
-  drop_na()%>% 
+tmp1 <- master_data %>%
+  select(matches("G._m")) %>%
+  drop_na()%>%
   mutate(across(everything(),
                 ~cut(.x,breaks = c(-1,7,15,21),
-                    labels = c("low","medium","high")))) %>% 
+                    labels = c("low","medium","high")))) %>%
   group_by(G1_m,G2_m) %>%
-  summarise(n = n()) %>% 
+  summarise(n = n()) %>%
   mutate(G1_m = paste0("First ",G1_m),
-         G2_m = paste0("Second ",G2_m)) %>% 
+         G2_m = paste0("Second ",G2_m)) %>%
   arrange(-n)
 
 
@@ -185,7 +177,7 @@ style <- sapply(nodes$ID, function(id)
 list(col=cols[ gsub("(First|Second) ", "", id) ]), simplify=FALSE)
 
 
-r <- makeRiver(nodes,edges,styles =style) 
+r <- makeRiver(nodes,edges,styles =style)
 d <- list(srt=0, textcex=1.5) # default style
 plot(r, plot_area=1, nodewidth=10, default_style=d)
 
@@ -193,7 +185,7 @@ plot(r, plot_area=1, nodewidth=10, default_style=d)
 
 
 # Question 3
-What is the distribution of grades across subjects and grades in the current period?
+What is the distribution of grades across subjects and periods in the current school year?
 
 ```{r}
 grade_per_subject_long <-
@@ -202,26 +194,36 @@ grade_per_subject_long <-
   select(row_num, starts_with("G", ignore.case = FALSE)) %>%
   pivot_longer(-row_num) %>%
   separate(name, c("grade", "subject"))
-```
-
-```{r}
 subject_pretty_names <- tibble(short_name = c('m', 'p'),
                                pretty_name = c('Mathematics','Portugese'))
+periods_colors <- tibble(period = 1:3,
+                         color_name = color_palette$colors[2:4])
+
+data_to_boxplot <- grade_per_subject_long %>%
+  inner_join(subject_pretty_names, by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")) %>%
+  mutate(period = as.numeric(period)) %>%
+  inner_join(periods_colors)
+```
+
+```{r}
+grades_boxplot <- ggplot(data = data_to_boxplot,
+       aes(y = value, x = factor(pretty_name),
+           fill = factor(period),
+           colour=factor(period))) +
+  geom_boxplot(alpha = 0.6, show.legend = F) +
+  geom_point(position = position_jitterdodge()) +
+  ggtitle("What is the distribution of grades across \n subjects and periods in the current school year?") +
+  labs(x = "Subject", y = "Grade", colour = "Period") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = periods_colors$color_name) +
+  scale_fill_manual(values = periods_colors$color_name) +
+  guides(fill=FALSE)
 ```
 
 
 ```{r}
-ggplot(data = grade_per_subject_long %>%
-  inner_join(subject_pretty_names,
-             by = c("subject" = "short_name")) %>% separate(grade, 1, into = c("to_remove", "period")),
-       aes(y = value, x = factor(pretty_name), fill = factor(period), colour=factor(period))) +
-  geom_boxplot(alpha = 0.6, show.legend = F) +
-  geom_point(position = position_jitterdodge()) +
-  ggtitle("Grades from Mathematics and Portugese") +
-  labs(x = "Subject", y = "Grade", colour = "Period") + guides(fill=FALSE)
+grades_boxplot
 ```
-
-
 
 Grades for Portugese were consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
@@ -230,7 +232,7 @@ to the subsequent periods results'.
 # Question 4
 
 How the amount of spare time and the way of spending it influence
-the number of absences.
+the number of absences?
 
 
 ```{r}
@@ -261,19 +263,9 @@ absences.agg.to.plot.m <- absences.agg %>%
              by = c("goout_m" = "ugly_level")) %>%
   rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_m)
 
-absences.m.plot <-
-  ggplot(absences.agg.to.plot.m, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
-  geom_tile(aes(fill = absences_m), color = 'white', show.legend = F) +
-  theme_minimal() +
-  geom_text(aes(label = absences_m), size = 5, fontface = 'bold', color = 'white') +
-    theme(panel.grid = element_blank(),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank()) + ggtitle('Mathematics')
-```
-```{r}
 absences.agg <- master_data %>%
   group_by(freetime_p, goout_p) %>%
-  summarise(across(absences_p, ~n()))
+  summarise(across(.cols = absences_p, .fns = ~sum(.)))
 
 low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
                        pretty_level = c('very low',
@@ -281,57 +273,50 @@ low.high.map <- tibble(ugly_level = c(1, 2, 3, 4, 5),
                                         'medium',
                                         'high',
                                         'very high'))
-```
-
-
-```{r}
 absences.agg.to.plot.p <- absences.agg %>%
   ungroup() %>%
   inner_join(low.high.map,
              by = c("freetime_p" = "ugly_level")) %>%
-  rename( freetime_pretty = pretty_level) %>%
+  rename(freetime_pretty = pretty_level) %>%
   inner_join(low.high.map,
              by = c("goout_p" = "ugly_level")) %>%
-  rename( goout_pretty = pretty_level) %>% select(freetime_pretty, goout_pretty, absences_p)
+  mutate(goout_p = factor(goout_p)) %>%
+  rename( goout_pretty = pretty_level) %>%
+  select(freetime_pretty, goout_pretty, absences_p)
+
+absences.agg.to.plot.p$freetime_pretty <- factor(absences.agg.to.plot.p$freetime_pretty, levels = c("very low", "low", "medium", "high", "very high"))
+absences.agg.to.plot.p$goout_pretty <- factor(absences.agg.to.plot.p$goout_pretty, levels = c("very low", "low", "medium", "high", "very high"))
 ```
 
 
 ```{r}
-absences.p.plot <-
-ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) + # nowa baza danych
+ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) +
   geom_tile(aes(fill = absences_p), color = 'white', show.legend = F) +
   theme_minimal() +
   geom_text(aes(label = absences_p), size = 5, fontface = 'bold', color = 'white') +
+  labs(title ='How the amount of spare time and going out with friends \n influence the number of absences at Portugese classes?',
+       x = "Free time after school",
+       y = "Going out with friends") +
   theme(panel.grid = element_blank(),
-axis.title.x = element_blank(),
-        axis.title.y = element_blank()) + ggtitle('Portugese')
-```
-
-```{r}
-grid.arrange(arrangeGrob(absences.m.plot + theme(legend.position = "none"),
-                         absences.p.plot + theme(legend.position = "none"),
-                         ncol = 2),
-             nrow = 2,
-             heights = c(10, 1), # relative height of two rows
-             top = textGrob("Consideration of the spare time might be an indicator for the number of absences.", vjust = 1, gp = gpar(fontface = "bold", cex = 1.5)),
-             left = textGrob("Free time after school", rot = 90, vjust = 1),
-             bottom = textGrob("Going out with friends", rot = 0, vjust = -2)
-)
-
+        plot.title = element_text(hjust = 0.5, size = 15),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 15)) +
+    scale_fill_gradient(low = color_palette$colors[3],
+                        high = color_palette$colors[2])
 ```
 
 # Question 5
 Does relationship status influence a number of absences?
 
 ```{r}
-tmp1 <-   master_data %>% 
-  group_by(Medu,Fedu,Pstatus) %>% 
+tmp1 <-   master_data %>%
+  group_by(Medu,Fedu,Pstatus) %>%
   summarise(avg_grade_m = mean(G3_m) %>% round(2),
-            avg_grade_p = mean(G3_p) %>% round(2) 
-            ) %>% 
-  mutate(grades = paste("Math:",avg_grade_m,"\nPort.:",avg_grade_p)) 
+            avg_grade_p = mean(G3_p) %>% round(2)
+            ) %>%
+  mutate(grades = paste("Math:",avg_grade_m,"\nPort.:",avg_grade_p))
 
-master_data %>% 
+master_data %>%
 ggplot()+
   geom_bin2d(aes(as.factor(Medu),as.factor(Fedu), fill = ..count../nrow(master_data)))+
   labs(x = "mother's education",
@@ -347,8 +332,8 @@ ggplot()+
                               '4th grade',
                               '5th to 9th grade',
                               'secondary education',
-                              ' higher education' ))+ 
-  theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust=0.5)) + 
+                              ' higher education' ))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust=0.5)) +
   geom_text(data = tmp1,aes(as.factor(Medu),as.factor(Fedu),label =grades),
             color = "white")+
   facet_wrap(.~Pstatus, labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))
@@ -356,7 +341,7 @@ ggplot()+
 
 # Question 6
 
-Is there any association between students' performance across terms and subjects?
+Is there any association between students' performance across periods and subjects?
 
 ```{r}
 pass_fail_association <- master_data %>%
@@ -366,18 +351,18 @@ pass_fail_association <- master_data %>%
          failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
   group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>% count()
 pass_fail_association$group <- c("Rockstars",
-                                 "Accidents will happen",
-                                 "Accidents will happen",
+                                 "Accidents \n will happen",
+                                 "Accidents \n will happen",
                                  "Achilles' heel",
                                  "Achilles' heel",
-                                 "Accidents will happen",
-                                 "Accepting trade-off",
+                                 "Accidents \n will happen",
+                                 "Accepting \n trade-off",
                                  "Rockstars",
-                                 "Misery loves company",
+                                 "Misery loves \n company",
                                  "Achilles' heel",
                                  "Achilles' heel",
-                                 "Misery loves company",
-                                 "Misery loves company")
+                                 "Misery loves \n company",
+                                 "Misery loves \n company")
 pass_fail_association_aggregate <- pass_fail_association %>%
   group_by(group) %>%
   summarise(student_count = sum(n))
@@ -401,13 +386,19 @@ ggplot(pass_fail_association_aggregate,
            label = group,
        fill = student_count)) +
   geom_treemap() +
-  geom_treemap_text(fontface = "italic", colour = "white", place = "centre",
-                    grow = F) +
-  labs(title = "Consistency of pass/failure across years") +
-  scale_fill_gradient(guide = guide_colorbar(barheight = 20))
+  geom_treemap_text(fontface = "italic", colour = "white", place = "centre") +
+  labs(title = "What groups students form across school years?",
+       fill = "Students \n count") +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        legend.title = element_text(hjust = 0.5, size = 15),
+        axis.text = element_text(size = 15)) +
+  scale_fill_gradient(low = color_palette$colors[3],
+                      high = color_palette$colors[2])
 ```
 
 # Question 7
+
+What is the distribution of absences in each of the aforementioned groups?
 ```{r}
 groups_mean_absences <- master_data %>%
   mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
@@ -430,16 +421,22 @@ groups_mean_absences$group <- c("Rockstars",
                                  "Achilles' heel",
                                  "Misery loves company",
                                  "Misery loves company")
+```
+```{r}
 groups_mean_absences %>%
   group_by(group) %>%
   summarise(across(mean_absences, list(median = ~median(.)))) %>%
   ggdotchart(x = "group", y = "mean_absences_median",
+             ylab = "Median of mean absences in each group",
+             title = "What is the distribution of absences in the created groups?",
            palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+           font.label = list(size = 14, face = "plain"),
            sorting = "descending",
            rotate = TRUE,
            dot.size = 2,
            y.text.col = TRUE) +
-  theme_cleveland()
+  theme_cleveland() +
+  theme(plot.title = element_text(size = 15))
 ```
 
 # Question 8
@@ -451,29 +448,26 @@ all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
 dims <- paste0(all_numeric_var[4:11], "_m")
 dims <- append(dims, "G3_m")
 final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
-master_data_to_radar <- master_data %>%
+master_data_to_radar_m <- master_data %>%
     mutate(across(final_dims, scales::rescale)) %>%
     group_by(higher_m) %>%
-    summarise(across(final_dims, ~mean(.)))
-names(master_data_to_radar) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
-
-all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
-dims <- paste0(all_numeric_var[4:11], "_p")
-
-
-
-
-dims <- append(dims, "G3_p")
-final_dims <- c("Dalc_p", "Walc_p", "studytime_p", "absences_p", "G3_p")
-master_data_to_radar_p <- master_data %>%
-  mutate(across(final_dims, scales::rescale)) %>%
-  group_by(higher_p) %>%
-  summarise(across(final_dims, ~mean(.)))
-names(master_data_to_radar_p) <- c("wants to take higher education", "workday alcohol consumption", "weekend alcohol consumption", "weekly study time", "number of school absences", "final grade")
+    summarise(across(all_of(final_dims), ~mean(.)))
+names(master_data_to_radar_m) <- c("Wants to take \n higher education",
+                                   "Workday alcohol \n consumption",
+                                   "Weekend \n alcohol \n consumption",
+                                   "Weekly \n study time",
+                                   "Number of \n school absences",
+                                   "Mathematics \n final grade")
 ```
-```{r, out.width="100%"}
-grid.arrange(ggradar(master_data_to_radar), ggradar(master_data_to_radar_p),
-             ncol = 2)
+```{r, dpi = 100}
+ggradar(master_data_to_radar_m,
+        plot.title = "What is the impact of students' lifestyle?",
+        legend.title = "Wants to \n take higher \n education",
+        axis.label.size = 3,
+        legend.text.size = 10,
+        gridline.mid.colour = color_palette$colors[4],
+        group.colours = color_palette$colors[c(2,3)]) +
+  theme(legend.title=element_text(size=10), plot.title = element_text(size = 15))
 ```
 
 # Question 9
@@ -483,29 +477,29 @@ Are there gender differences in grades?
 ```{r}
 # calculate percentages
 helper_df <- master_data %>%
-  # mutate(fake_id = 1) %>% 
-  # group_by(fake_id) %>% 
+  # mutate(fake_id = 1) %>%
+  # group_by(fake_id) %>%
   summarise(mop = sum(G3_m>G3_p),
             pom = sum(G3_m<G3_p),
             fmop = sum((G3_m>G3_p) & sex == 'F'),
-            fpom = sum((G3_m<G3_p) & sex == 'F')) %>% 
+            fpom = sum((G3_m<G3_p) & sex == 'F')) %>%
   mutate(fmop_perc = fmop/mop, mmop_perc = 1-fmop_perc,
          fpom_perc = fpom/pom, mpom_perc = 1-fpom_perc,
          mop_perc = mop/(mop+pom),
          pom_perc = 1- mop_perc)
 
-helper_df_2 <- helper_df %>% 
+helper_df_2 <- helper_df %>%
   pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
-  select(c(name,value)) %>% 
+  select(c(name,value)) %>%
   .[1:2,]
 
-helper_df_3 <- helper_df %>% 
+helper_df_3 <- helper_df %>%
   pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
-  select(c(name,value)) %>% 
+  select(c(name,value)) %>%
   .[3:4,]
-                                                       
-master_data %>% 
-  #pivot_longer(c(G3_m,G3_p)) %>% 
+
+master_data %>%
+  #pivot_longer(c(G3_m,G3_p)) %>%
   ggplot()+
   geom_colh(data = helper_df_2,aes(y = -1,x = 20*value,fill = name),width = 1,
              position = "stackv")+
@@ -533,27 +527,27 @@ master_data %>%
 
 
 ```{r}
-master_data %>% 
-  group_by(age,sex) %>% 
-  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
-  filter(age<=19) %>% 
-  #pivot_longer(-c(age,sex)) %>% 
-  
+master_data %>%
+  group_by(age,sex) %>%
+  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>%
+  filter(age<=19) %>%
+  #pivot_longer(-c(age,sex)) %>%
+
 pyramid_chart( x = age, y = grade_m, group = sex,
                xlab = "grade", title = "Maths grade by age and gender")
-  
-  
 
-master_data %>% 
-  group_by(age,sex) %>% 
-  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
-  #pivot_longer(-c(age,sex)) %>% 
-    filter(age<=19) %>% 
+
+
+master_data %>%
+  group_by(age,sex) %>%
+  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>%
+  #pivot_longer(-c(age,sex)) %>%
+    filter(age<=19) %>%
 pyramid_chart( x = age, y = grade_p, group = sex,
                xlab = "grade", title = "Portuguese grade by age and gender")
 
 
-  
+
 ```
 
 # References
