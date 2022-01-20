@@ -83,7 +83,7 @@ comb <- ggarrange(supp_plot_p,supp_plot_m,
                   legend = "bottom")
 
 annotate_figure(comb , top = text_grob("Does obtaining support improve performance?",
-                                       size = 27))
+                                       size = 23))
 
 ```
 
@@ -109,7 +109,6 @@ paid support at the same time has a close-to-the-lowest average from both subjec
 ```{r}
 # attempt 1
 # data
-#<<<<<<< HEAD
 grade_cuts <-  c(-1,7,13,21)
 tmp1 <- master_data %>% 
   select(matches("G._m")) %>% 
@@ -232,12 +231,12 @@ grades_boxplot
 
 Grades for Portugese were consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
-to the subsequent periods results'.
+to the subsequent periods results. However, there are significantly more students
+that failed Mathematics.
 
 # Question 4
 
-How the amount of spare time and the way of spending it influence
-the number of absences?
+## How the amount of spare time and the way of spending it influence the number of absences?
 
 
 ```{r}
@@ -310,6 +309,10 @@ ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) +
                         high = color_palette$colors[2])
 ```
 
+## Insight
+
+Most of the absences is related to the students that have medium amount of free time after school and are likely to go out with friends. It seems that hanging out with colleagues might influence more the number of absences than not having a lot of chores.
+
 # Question 5
 
 ## Is parents' education and cohabitation status related to students' performance ?
@@ -364,22 +367,22 @@ level of education (red trend on diagonal).
 
 ```{r}
 pass_fail_association <- master_data %>%
-  mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
-         current_failure_p = if_else(G3_p >= 10, 1, 0),
-         failures_m_general = if_else(failures_m > 0, 1, 0),
-         failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
-  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>% count()
+  mutate(current_failure_m = if_else(G3_m < 10, 1, 0),
+         current_failure_p = if_else(G3_p < 10, 1, 0),
+         failures_m_before = if_else(failures_m > 0, 1, 0),
+         failures_p_before = if_else(failures_p > 0, 1, 0)) %>%
+  group_by(failures_m_before, current_failure_m, failures_p_before, current_failure_p) %>% count()
 pass_fail_association$group <- c("Rockstars",
                                  "Accidents \n will happen",
                                  "Accidents \n will happen",
-                                 "Achilles' heel",
-                                 "Achilles' heel",
                                  "Accidents \n will happen",
-                                 "Accepting \n trade-off",
+                                 "Accidents \n will happen",
+                                 "Accidents \n will happen",
+                                 "Accepting trade-off",
                                  "Rockstars",
                                  "Misery loves \n company",
-                                 "Achilles' heel",
-                                 "Achilles' heel",
+                                 "Accepting trade-off",
+                                 "Misery loves \n company",
                                  "Misery loves \n company",
                                  "Misery loves \n company")
 pass_fail_association_aggregate <- pass_fail_association %>%
@@ -387,25 +390,22 @@ pass_fail_association_aggregate <- pass_fail_association %>%
   summarise(student_count = sum(n))
 ```
 
-## Insight
 
 We created five groups that describe the consistency of the students' performance across periods.
 
-- Accidents will happen describe a group of people that generally pass both Mathematics and Portugese subjects but have experiences at least one failure.
+- **The Rockstars** have been depicted as the students that either are the gifted ones and pass both subjects consequently or after failing both previously now passed both of them.
 
-- With the Achilles' heel we associate guys that consequently have problem with passing either Mathematics or Portugese.
+- **Accidents will happen** describe a group of people that generally pass both Mathematics and Portugese subjects but have experiences at least one failure.
 
-- The Rockstars have been depicted as the students that either are the gifted ones and pass both subjects consequently or after failing both previously now passed them.
+- With the **Accepting trade-off** cluster the students that sacrifice one subject for the sake of the other were described.
 
-- With the mistery loves company description we try to motivate the folks that have issues with learning at school and consequently experience problems at school.
-
-- Accepting trade-off relate to the students that sacrifice one subject for the sake of the other.
+- By **the mistery loves company** description we try to motivate the folks that have issues with learning at school and consequently experience problems at school.
 
 ```{r}
 ggplot(pass_fail_association_aggregate,
        aes(area = student_count,
            label = group,
-       fill = student_count)) +
+           fill = student_count)) +
   geom_treemap() +
   geom_treemap_text(fontface = "italic", colour = "white", place = "centre") +
   labs(title = "What groups students form across school years?",
@@ -417,50 +417,13 @@ ggplot(pass_fail_association_aggregate,
                       high = color_palette$colors[2])
 ```
 
+## Insight
+
+There is a huge group of students that do not have problems with passing the subjects. Some people are aware of their
+capabilities and accepted the trade-off. Luckily, the misery loves company is not very big. Considering the last group
+we expected it to be smaller.
+
 # Question 7
-
-## What is the distribution of absences in each of the aforementioned groups?
-```{r}
-groups_mean_absences <- master_data %>%
-  mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
-         current_failure_p = if_else(G3_p >= 10, 1, 0),
-         failures_m_general = if_else(failures_m > 0, 1, 0),
-         failures_p_general = if_else(failures_p > 0, 1, 0)) %>%
-  mutate(mean_absences = (absences_m + absences_p)/2) %>%
-  group_by(failures_m_general, current_failure_m, failures_p_general, current_failure_p) %>% summarise(across(mean_absences, ~mean(.)))
-
-groups_mean_absences$group <- c("Rockstars",
-                                 "Accidents will happen",
-                                 "Accidents will happen",
-                                 "Achilles' heel",
-                                 "Achilles' heel",
-                                 "Accidents will happen",
-                                 "Accepting trade-off",
-                                 "Rockstars",
-                                 "Misery loves company",
-                                 "Achilles' heel",
-                                 "Achilles' heel",
-                                 "Misery loves company",
-                                 "Misery loves company")
-```
-```{r}
-groups_mean_absences %>%
-  group_by(group) %>%
-  summarise(across(mean_absences, list(median = ~median(.)))) %>%
-  ggdotchart(x = "group", y = "mean_absences_median",
-             ylab = "Median of mean absences in each group",
-             title = "What is the distribution of absences in the created groups?",
-           palette = c("#00AFBB", "#E7B800", "#FC4E07"),
-           font.label = list(size = 14, face = "plain"),
-           sorting = "descending",
-           rotate = TRUE,
-           dot.size = 2,
-           y.text.col = TRUE) +
-  theme_cleveland() +
-  theme(plot.title = element_text(size = 15))
-```
-
-# Question 8
 
 ## What is the impact of students' lifestyle for their performance?
 
@@ -470,7 +433,7 @@ dims <- paste0(all_numeric_var[4:11], "_m")
 dims <- append(dims, "G3_m")
 final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
 master_data_to_radar_m <- master_data %>%
-    mutate(across(final_dims, scales::rescale)) %>%
+    mutate(across(all_of(final_dims), scales::rescale)) %>%
     group_by(higher_m) %>%
     summarise(across(all_of(final_dims), ~mean(.)))
 names(master_data_to_radar_m) <- c("Wants to take \n higher education",
@@ -491,7 +454,13 @@ ggradar(master_data_to_radar_m,
   theme(legend.title=element_text(size=10), plot.title = element_text(size = 15))
 ```
 
-# Question 9
+## Insight
+
+Our assumptions were mostly correct and are confirmed with the graph. Students that want to continue their education
+at universities have better grades in Mathematics and their lifestyle is better. Interestingly the number of school
+absences does not play a remarkable role.
+
+# Question 8
 
 ## Are there gender differences in grades?
 
@@ -519,7 +488,6 @@ helper_df_3 <- helper_df %>%
   select(c(name,value)) %>%
   .[3:4,]
 
-# <<<<<<< HEAD
  seg_end_lst <- get_diag_segment_ends(side_length = 22)
  seg_end <- seg_end_lst$end
  fem_perc_diag <- seg_end_lst$fem_perc
