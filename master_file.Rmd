@@ -4,6 +4,7 @@ subtitle: Using advanced visualization techniques to explore relationships betwe
 author: "Wojciech Maślakiewicz & Mateusz Baryła"
 output:
   html_document:
+      code_folding: hide
       df_print: paged
       toc: yes
       toc_float: yes
@@ -14,7 +15,7 @@ nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,message=FALSE, warning = FALSE)
 pacman::p_load(tidyverse, readxl, ggpubr, riverplot,
                gridExtra, grid, tidyverse, treemapify,
                ggradar, ggstance, ggthemes,ggcharts)
@@ -47,97 +48,10 @@ dictionary <- read_excel("dictionary.xlsx")
 ```
 
 # Question 1
-What kind of support students get for each subject?
 
-```{r}
+## What kind of support students get for each subject?
 
-supp_m <- master_data %>% group_by(famsup_m,schoolsup_m,paid_m) %>%
-  summarise(n = n(), grade = mean(G3_m), .groups = "rowwise") %>%
-  mutate(cat_name = paste("f",famsup_m,"s",schoolsup_m,"p",paid_m,sep = '_')) %>%
-  mutate(id = cur_group_id())
-
-tmp_1 <- supp_m  %>% pivot_longer(c(famsup_m,schoolsup_m,paid_m))
-## tiles
-# calculate positions of tiles
-max_n <- 1#max(supp_m$n)
-tile_half_height <- (max_n*1.01)/6
-tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
-
-tiles_df <- data.frame(
-  x = rep(seq(1,8,1), 3),
-  y = rep(tile_y_middles, each = 8)
-)%>% arrange(x) %>% mutate(z = tmp_1$value)
-
-#maths
-supp_plot_m <- ggplot() +
-  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
-  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
-  scale_x_discrete()+
-  geom_col(data = supp_m, aes(x=cat_name,y=n/sum(n)), alpha = 0.8, width = 0.8, fill = "steelblue")+
-  scale_y_continuous(breaks = seq(0,1, length.out = 5)
-                    ,sec.axis = sec_axis( ~.,
-                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
-                                          labels = c("Family support","School support", "Paid support")))+
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        panel.background = element_blank(),
-        axis.line.y = element_line())+
-  ylab("Fraction of students")+
-  ggtitle("Maths")
-```
-
-```{r, echo = FALSE}
-supp_plot_m
-```
-
-```{r}
-# better varsion of barplot to answer the quesition PORT
-
-# create additional variables
-
-master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>%
-  summarise(n = n(), grade = mean(G3_p)) %>%
-  arrange(-grade) %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p)) %>%
-  mutate(bg_color = ifelse(value == "yes", "green","red")) ->tmp_1
-
-supp_p <- master_data %>% group_by(famsup_p,schoolsup_p,paid_p) %>%
-  summarise(n = n(), grade = mean(G3_p), .groups = "rowwise") %>%
-  mutate(cat_name = paste("f",famsup_p,"s",schoolsup_p,"p",paid_p,sep = '_')) %>%
-  mutate(id = cur_group_id())
-
-tmp_1 <- supp_p  %>% pivot_longer(c(famsup_p,schoolsup_p,paid_p))
-max_n <- max(supp_p$n)
-tile_half_height <- (max_n+2)/6
-tile_y_middles <- c(tile_half_height,3*tile_half_height,5*tile_half_height)
-
-tiles_df <- data.frame(
-  x = rep(seq(1,8,1), 3),
-  y = rep(tile_y_middles, each = 8)
-)%>% arrange(x) %>% mutate(z = tmp_1$value)
-
-
-supp_plot_p <- ggplot() +
-  geom_tile(data = tiles_df, aes(x, y,fill = z), colour = "white", alpha = 0.3)+
-  scale_fill_manual(breaks=c("no","yes"),values=c("#f21a02","#a3d487"), name = "Support provided?")+
-  scale_x_discrete()+
-  geom_col(data = supp_p, aes(x=cat_name,y=n), alpha = 0.8, width = 0.8, fill = "steelblue")+
-  scale_y_continuous(breaks = seq(10,max(supp_p$n), length.out = 5) %>% round()
-                    ,sec.axis = sec_axis( ~.,
-                                          breaks =c(tile_half_height,3*tile_half_height,5*tile_half_height),
-                                          labels = c("Family support","School support", "Paid support")))+
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        panel.background = element_blank(),
-        axis.line.y = element_line())+
-  ylab("Number of students")+
-  ggtitle("Portuguese")
-
-
-```
-```{r}
-
+```{r }
 supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
                                           title = '',
                                           bar_color = "#30475E")
@@ -170,10 +84,27 @@ comb <- ggarrange(supp_plot_p,supp_plot_m,
 
 annotate_figure(comb , top = text_grob("Does obtaining support improve performance?",
                                        size = 27))
+
 ```
 
+## Insight
+
+What we observe is that in Portuguese classes most students get only family 
+support or no support at all. Interestingly, at the same time those students 
+have the highest average grade. This would suggest that support is given to 
+students who tend to perform poorly in class rather than students perform well
+BECAUSE they got support.
+
+In Maths most students get family and paid support or no support. The highest 
+average is among those getting paid support and both paid and family support.
+
+It's worth mentioning that the small group of students getting school support and
+paid support at the same time has a close-to-the-lowest average from both subjects. 
+
+
 # Question 2
-Do students improve their grades during the year?
+
+## Do students improve their grades during the year?
 
 ```{r}
 # attempt 1
@@ -192,19 +123,7 @@ tmp1 <- master_data %>%
          G2_m = paste0("Second ",G2_m),
          G3_m = paste0("Final ",G3_m)) %>% 
   arrange(G1_m,G2_m)
-# =======
-# tmp1 <- master_data %>%
-#   select(matches("G._m")) %>%
-#   drop_na()%>%
-#   mutate(across(everything(),
-#                 ~cut(.x,breaks = c(-1,7,15,21),
-#                     labels = c("low","medium","high")))) %>%
-#   group_by(G1_m,G2_m) %>%
-#   summarise(n = n()) %>%
-#   mutate(G1_m = paste0("First ",G1_m),
-#          G2_m = paste0("Second ",G2_m)) %>%
-#   arrange(-n)
-# >>>>>>> 7dc0b1bca1330e903b86366823e193324e68d2bb
+
 
 
 # final plot
@@ -249,21 +168,27 @@ style <- sapply(nodes$ID, function(id)
 list(col=cols[ gsub("(First|Second|Final) ", "", id) ]), simplify=FALSE)
 
 
-# <<<<<<< HEAD
+
 r <- makeRiver(nodes,edges,styles =style) 
 d <- list(srt = 0, textcex=1, textcol = "white") 
-# =======
-# r <- makeRiver(nodes,edges,styles =style)
-# d <- list(srt=0, textcex=1.5) # default style
-# >>>>>>> 7dc0b1bca1330e903b86366823e193324e68d2bb
+
 plot(r, plot_area=1, nodewidth=10, default_style=d)
 title("Flows of students between performance groups")
 ```
 
+## Insight 
 
+We observe that the performace of students is rather persistant across the year.
+Very little students tend to either improve or worsen their performance.
+
+The biggest observable flows between performance groups happens between first and 
+second period especially between low and medium group. Nonetheless, those flows 
+are modest and seem not to change the overall distribution of performance where
+the most students are the medium ones.
 
 # Question 3
-What is the distribution of grades across subjects and periods in the current school year?
+
+## What is the distribution of grades across subjects and periods in the current school year?
 
 ```{r}
 grade_per_subject_long <-
@@ -302,6 +227,8 @@ grades_boxplot <- ggplot(data = data_to_boxplot,
 ```{r}
 grades_boxplot
 ```
+
+## Insight 
 
 Grades for Portugese were consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
@@ -384,7 +311,8 @@ ggplot(absences.agg.to.plot.p, aes(x = freetime_pretty, y = goout_pretty)) +
 ```
 
 # Question 5
-Does relationship status influence a number of absences?
+
+## Is parents' education and cohabitation status related to students' performance ?
 
 ```{r}
 tmp1 <-   master_data %>%
@@ -403,26 +331,36 @@ ggplot()+
        title = "Average grades of students given their parents education")+
   scale_x_discrete(labels = c('none',
                               '4th grade',
-                              '5th to 9th grade',
-                              'secondary education',
-                              ' higher education' ))+
+                              '5th to 9th ngrade',
+                              'secondary \neducation',
+                              ' higher \neducation' ))+
     scale_y_discrete(labels = c('none',
                               '4th grade',
                               '5th to 9th grade',
-                              'secondary education',
+                              'secondary \neducation',
                               ' higher education' ))+
   theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust=0.5)) +
   geom_text(data = tmp1,aes(as.factor(Medu),as.factor(Fedu),label =grades),
             color = "white",
-            size = 3)+
+            size = 2,
+            fontface = "bold")+
   scale_fill_gradient(low = color_palette$colors[3],
                       high = color_palette$colors[2])+
-  facet_wrap(.~Pstatus,ncol=1 ,labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))
+  facet_wrap(.~Pstatus,ncol=1 ,labeller = as_labeller(c("A" = "parents live apart","T" = "parents live together")))+
+  theme(panel.background = element_blank(),
+        panel.grid.major = element_line(colour = "grey"))
 ```
+
+## Insight
+
+We can infer that there is no clear relationship between parents education and
+students' performance. Also parents' cohabitation status seems to be independent
+from the performance. We can observe that most students have parents with same
+level of education (red trend on diagonal).
 
 # Question 6
 
-Is there any association between students' performance across periods and subjects?
+## Is there any association between students' performance across periods and subjects?
 
 ```{r}
 pass_fail_association <- master_data %>%
@@ -448,6 +386,8 @@ pass_fail_association_aggregate <- pass_fail_association %>%
   group_by(group) %>%
   summarise(student_count = sum(n))
 ```
+
+## Insight
 
 We created five groups that describe the consistency of the students' performance across periods.
 
@@ -479,7 +419,7 @@ ggplot(pass_fail_association_aggregate,
 
 # Question 7
 
-What is the distribution of absences in each of the aforementioned groups?
+## What is the distribution of absences in each of the aforementioned groups?
 ```{r}
 groups_mean_absences <- master_data %>%
   mutate(current_failure_m = if_else(G3_m >= 10, 1, 0),
@@ -522,7 +462,7 @@ groups_mean_absences %>%
 
 # Question 8
 
-What is the impact of students' lifestyle for their performance?
+## What is the impact of students' lifestyle for their performance?
 
 ```{r}
 all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
@@ -553,7 +493,7 @@ ggradar(master_data_to_radar_m,
 
 # Question 9
 
-Are there gender differences in grades?
+## Are there gender differences in grades?
 
 ```{r}
 # calculate percentages
@@ -585,10 +525,6 @@ helper_df_3 <- helper_df %>%
  fem_perc_diag <- seg_end_lst$fem_perc
                                                   
 plt <-   
-# =======
-master_data %>%
-  #pivot_longer(c(G3_m,G3_p)) %>%
-# >>>>>>> 7dc0b1bca1330e903b86366823e193324e68d2bb
   ggplot()+
   geom_segment(aes(x=0,y=0,xend=seg_end,yend=seg_end), size = 6, color ="#F05454", alpha = 0.5 )+
   geom_segment(aes(x=seg_end,y=seg_end,xend=20,yend=20), size = 6, color ="#30475E",alpha = 0.5 )+
@@ -675,9 +611,15 @@ master_data %>%
  
 ```
 
+## Insight (1)
+
+We can clearly see that in general students perform better in Portuguese class
+than in math class. In addition, among those who are better in maths there are
+more males but in among those who are better in Portuguese - female are dominating.
+
+
 
 ```{r}
-# <<<<<<< HEAD
 math_pyr <- master_data %>% 
   group_by(age,sex) %>% 
   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
@@ -697,36 +639,20 @@ port_pyr <- master_data %>%
   #pivot_longer(-c(age,sex)) %>% 
     filter(age<=19) %>%  
   mutate(sex = ifelse(sex == "F","Female","Male")) %>% 
-# =======
-# master_data %>%
-#   group_by(age,sex) %>%
-#   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>%
-#   filter(age<=19) %>%
-#   #pivot_longer(-c(age,sex)) %>%
-# 
-# pyramid_chart( x = age, y = grade_m, group = sex,
-#                xlab = "grade", title = "Maths grade by age and gender")
-# 
-# 
-# 
-# master_data %>%
-#   group_by(age,sex) %>%
-#   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>%
-#   #pivot_longer(-c(age,sex)) %>%
-#     filter(age<=19) %>%
-# >>>>>>> 7dc0b1bca1330e903b86366823e193324e68d2bb
+
 pyramid_chart( x = age, y = grade_p, group = sex,
                xlab = "Portuguese average grade",
                bar_colors = c("#F05454","#30475E"))
 
-
-# <<<<<<< HEAD
 comb <- ggarrange(math_pyr,port_pyr)
 annotate_figure(comb,top = text_grob("Grade average by age and gender",
                                        size = 20))
-# =======
-# 
-# >>>>>>> 7dc0b1bca1330e903b86366823e193324e68d2bb
+
 ```
+
+## Insight (2)
+
+The distribution of grades among genders when controlling for age reveals that
+the difference in performance in math classes is most striking among the youngest students.
 
 # References
