@@ -55,10 +55,11 @@ dictionary <- read_excel("dictionary.xlsx")
 supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
                                           title = '',
                                           bar_color = "#30475E")
+
 supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p,
                                           title = '',
                                           bar_color = "#30475E")
-# get rid of RIGHT axis in LEFT plot
+
 supp_plot_p <- supp_plot_p + theme(axis.line.y.right = element_blank(),
                                    axis.text.y.right = element_blank(),
                                    axis.ticks.y.right = element_blank(),
@@ -66,7 +67,6 @@ supp_plot_p <- supp_plot_p + theme(axis.line.y.right = element_blank(),
                                    axis.title.y.left = element_text(size=18),
                                    axis.text.y.left = element_text(size=19))
 
-# get rid of LEFT axis in RIGHT plot
 supp_plot_m <- supp_plot_m + theme(axis.line.y.left = element_blank(),
                                    axis.text.y.left = element_blank(),
                                    axis.ticks.y.left = element_blank(),
@@ -107,7 +107,6 @@ paid support at the same time has a close-to-the-lowest average from both subjec
 ## Do students improve their grades during the year?
 
 ```{r}
-# attempt 1
 # data
 grade_cuts <-  c(-1,7,13,21)
 tmp1 <- master_data %>% 
@@ -229,7 +228,7 @@ grades_boxplot
 
 ## Insight 
 
-Grades for Portugese were consistently higher than in Mathematics.
+Grades for Portugese are consistently higher than in Mathematics.
 We do not observe neither a positive nor negative trend relating
 to the subsequent periods results. However, there are significantly more students
 that failed Mathematics.
@@ -372,6 +371,7 @@ pass_fail_association <- master_data %>%
          failures_m_before = if_else(failures_m > 0, 1, 0),
          failures_p_before = if_else(failures_p > 0, 1, 0)) %>%
   group_by(failures_m_before, current_failure_m, failures_p_before, current_failure_p) %>% count()
+
 pass_fail_association$group <- c("Rockstars",
                                  "Accidents \n will happen",
                                  "Accidents \n will happen",
@@ -385,19 +385,19 @@ pass_fail_association$group <- c("Rockstars",
                                  "Misery loves \n company",
                                  "Misery loves \n company",
                                  "Misery loves \n company")
+
 pass_fail_association_aggregate <- pass_fail_association %>%
   group_by(group) %>%
   summarise(student_count = sum(n))
 ```
 
-
 We created five groups that describe the consistency of the students' performance across periods.
 
-- **The Rockstars** have been depicted as the students that either are the gifted ones and pass both subjects consequently or after failing both previously now passed both of them.
+- **The Rockstars** are depicted as the students that either are the gifted ones and pass both subjects consequently or after failing both previously now passed both of them.
 
-- **Accidents will happen** describe a group of people that generally pass both Mathematics and Portugese subjects but have experiences at least one failure.
+- **Accidents will happen** describes a group of people that generally pass both Mathematics and Portugese subjects but have experiences at least one failure.
 
-- With the **Accepting trade-off** cluster the students that sacrifice one subject for the sake of the other were described.
+- With the **Accepting trade-off** cluster we describe the students that sacrifice one subject for the sake of the other.
 
 - By **the mistery loves company** description we try to motivate the folks that have issues with learning at school and consequently experience problems at school.
 
@@ -421,7 +421,7 @@ ggplot(pass_fail_association_aggregate,
 
 There is a huge group of students that do not have problems with passing the subjects. Some people are aware of their
 capabilities and accepted the trade-off. Luckily, the misery loves company is not very big. Considering the last group
-we expected it to be smaller.
+it is bigger than it might be expected.
 
 # Question 7
 
@@ -429,13 +429,18 @@ we expected it to be smaller.
 
 ```{r}
 all_numeric_var <- dictionary %>% filter(type == 'numeric') %>% pull(variable)
+
 dims <- paste0(all_numeric_var[4:11], "_m")
+
 dims <- append(dims, "G3_m")
+
 final_dims <- c("Dalc_m", "Walc_m", "studytime_m", "absences_m", "G3_m")
+
 master_data_to_radar_m <- master_data %>%
     mutate(across(all_of(final_dims), scales::rescale)) %>%
     group_by(higher_m) %>%
     summarise(across(all_of(final_dims), ~mean(.)))
+
 names(master_data_to_radar_m) <- c("Wants to take \n higher education",
                                    "Workday alcohol \n consumption",
                                    "Weekend \n alcohol \n consumption",
@@ -456,7 +461,7 @@ ggradar(master_data_to_radar_m,
 
 ## Insight
 
-Our assumptions were mostly correct and are confirmed with the graph. Students that want to continue their education
+Our assumptions are mostly correct and are confirmed with the graph. Students that want to continue their education
 at universities have better grades in Mathematics and their lifestyle is better. Interestingly the number of school
 absences does not play a remarkable role.
 
@@ -467,8 +472,6 @@ absences does not play a remarkable role.
 ```{r}
 # calculate percentages
 helper_df <- master_data %>%
-  # mutate(fake_id = 1) %>%
-  # group_by(fake_id) %>%
   summarise(mop = sum(G3_m>G3_p),
             pom = sum(G3_m<G3_p),
             fmop = sum((G3_m>G3_p) & sex == 'F'),
@@ -500,7 +503,6 @@ plt <-
              size = 3,
              position=position_dodge(width=0.5),
              alpha = 1)+
-  #geom_abline(slope = 1,intercept = 0)+
   annotate("text",label = paste("Better portuguese \nthan maths:\n",
                                 round(helper_df$pom_perc*100),
                                 "% of all"),
@@ -526,19 +528,16 @@ plt <-
            color ="White",
            x =19, y =19,
            angle = 45)+
-  #scale_fill_manual(values = c("#F05454", "#F05454","#30475E", "#30475E"),)+
   guides(fill="none")+
   scale_color_manual(values = c("#F05454","#30475E"),labels = c("female","male"))+
   coord_fixed()+
-  #coord_cartesian(xlim = c(0,20),ylim = c(0,20))+
   labs(x="Maths grade", y="Portuguese grade", title = "Relationship between grades from two subjects by gender")+
   theme(panel.grid = element_blank(),
         legend.box.background = element_blank(),
         legend.key = element_rect(colour = "transparent",fill = alpha("red", 0)),
         plot.margin = margin(0,0,0,-20)
-        )#panel.background = element_blank()) #element_rect(fill = "#F5F5F5", size = 5))
- 
-  #pivot_longer(c(G3_m,G3_p)) %>% 
+        )
+
   plt_b <- ggplot(data = helper_df_2)+
   geom_colh(aes(y = 0,x = value,fill = name),
             position = "stackv",
@@ -560,11 +559,7 @@ plt <-
   theme(legend.position = "none")+
   geom_text(aes(x =0 , y = value - 0.1,label = paste0(round(value,2)*100,"%")),
             color = "white")
-  
-  
-  
-   
-   
+
   lay <- rbind(c(1,2,2,2),
                c(NA,NA,NA,NA),
                c(NA,NA,3,NA))
@@ -573,7 +568,6 @@ plt <-
               layout_matrix = lay,
               widths = c(3,1,20,5),
               heights = c(25,1,2))
-  #margin = theme(plot.margin = margin(0,0,0,0))
 
   grid.arrange(plt_fin)
  
@@ -592,20 +586,15 @@ math_pyr <- master_data %>%
   group_by(age,sex) %>% 
   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
   filter(age<=19) %>% 
-  mutate(sex = ifelse(sex == "F","Female","Male")) %>% 
-  #pivot_longer(-c(age,sex)) %>% 
-  
-pyramid_chart( x = age, y = grade_m, group = sex,
+  mutate(sex = ifelse(sex == "F","Female","Male")) %>%
+  pyramid_chart( x = age, y = grade_m, group = sex,
                xlab = "Maths average grade",
                bar_colors = c("#F05454","#30475E"))
-  
-  
 
 port_pyr <- master_data %>% 
   group_by(age,sex) %>% 
-  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
-  #pivot_longer(-c(age,sex)) %>% 
-    filter(age<=19) %>%  
+  summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>%
+  filter(age<=19) %>%
   mutate(sex = ifelse(sex == "F","Female","Male")) %>% 
 
 pyramid_chart( x = age, y = grade_p, group = sex,
@@ -613,9 +602,9 @@ pyramid_chart( x = age, y = grade_p, group = sex,
                bar_colors = c("#F05454","#30475E"))
 
 comb <- ggarrange(math_pyr,port_pyr)
+
 annotate_figure(comb,top = text_grob("Grade average by age and gender",
                                        size = 20))
-
 ```
 
 ## Insight (2)
