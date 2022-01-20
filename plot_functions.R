@@ -48,7 +48,7 @@ make_barplot_with_bg_tiles <- function(data,
               alpha = tile_alpha) +
     scale_fill_manual(
       breaks = c("no", "yes"),
-      values = c("#f21a02", "#a3d487"),
+      values = c("#F05454", "#F5F5F5"),
       name = "Support provided?"
     ) +
     scale_x_discrete() +
@@ -79,10 +79,29 @@ make_barplot_with_bg_tiles <- function(data,
     ) +
     ylab("Fraction of students") +
     ggtitle(title)+
-    geom_text(data = supp, aes(x = cat_name, y = n / sum(n) + 0.02, label = round(grade,2)))
+    geom_text(data = supp, 
+              aes(x = cat_name, y = n / sum(n) + 0.02, label = round(grade,2)))
   
   return(supp_plot)
 }
+
+
+get_diag_segment_ends <- function(start = 0,side_length = 20){
+  df <- master_data %>% 
+    filter(G3_m == G3_p) %>% 
+    group_by(sex) %>% 
+    summarise(cnt = n()) %>% 
+    mutate(perc = cnt/sum(cnt))
+  
+  diag_length <- side_length*sqrt(2)
+  
+  #female
+  fem_perc <- df[df$sex == "F", "perc"] %>% pull()
+  seg_1_end <- diag_length * fem_perc/sqrt(2)
+  return(list(end = seg_1_end, fem_perc = fem_perc ))
+  
+}
+
 
 
 

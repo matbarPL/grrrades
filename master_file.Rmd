@@ -51,7 +51,7 @@ dictionary <- read_excel("dictionary.xlsx")
 ```
 
 # Question 1
-What kind of support students with each subject?
+What kind of support students get for each subject?
 
 ## Code
 
@@ -147,9 +147,37 @@ supp_plot_p <- ggplot() +
 ```{r}
 
 supp_plot_m <- make_barplot_with_bg_tiles(master_data,famsup_m,schoolsup_m,paid_m,G3_m,
-                                          title = '')
-supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p)
-ggarrange(supp_plot_p,supp_plot_m,common.legend = T , legend = "bottom")
+                                          title = '',
+                                          bar_color = "#30475E")
+supp_plot_p <- make_barplot_with_bg_tiles(master_data,famsup_p,schoolsup_p,paid_p,G3_p,
+                                          title = '',
+                                          bar_color = "#30475E")
+# get rid of RIGHT axis in LEFT plot
+supp_plot_p <- supp_plot_p + theme(axis.line.y.right = element_blank(),
+                                   axis.text.y.right = element_blank(),
+                                   axis.ticks.y.right = element_blank(),
+                                   axis.title.y.right = element_blank(),
+                                   axis.title.y.left = element_text(size=18),
+                                   axis.text.y.left = element_text(size=19))
+
+# get rid of LEFT axis in RIGHT plot
+supp_plot_m <- supp_plot_m + theme(axis.line.y.left = element_blank(),
+                                   axis.text.y.left = element_blank(),
+                                   axis.ticks.y.left = element_blank(),
+                                   axis.title.y.left = element_blank(),
+                                   axis.title.y.right = element_text(size=18),
+                                   axis.text.y.right = element_text(size=19))
+comb <- ggarrange(supp_plot_p,supp_plot_m,
+                  align = "h",
+                  labels = c("Portuguese","Maths"),
+                  font.label = list(size = 12, face = 'plain'),
+                  hjust = c(-2,-2.5),
+                  vjust = 3,
+                  common.legend = T ,
+                  legend = "bottom")
+
+annotate_figure(comb , top = text_grob("Does obtaining support improve performance?",
+                                       size = 27))
 ```
 
 # Question 2
@@ -158,38 +186,69 @@ Do students improve their grades during the year?
 ```{r}
 # attempt 1
 # data
+grade_cuts <-  c(-1,7,13,21)
 tmp1 <- master_data %>% 
   select(matches("G._m")) %>% 
   drop_na()%>% 
   mutate(across(everything(),
-                ~cut(.x,breaks = c(-1,7,15,21),
+                ~cut(.x,breaks = grade_cuts,
                     labels = c("low","medium","high")))) %>% 
-  group_by(G1_m,G2_m) %>%
+  group_by(G1_m,G2_m,G3_m) %>%
   summarise(n = n()) %>% 
   mutate(G1_m = paste0("First ",G1_m),
-         G2_m = paste0("Second ",G2_m)) %>% 
-  arrange(-n)
+         G2_m = paste0("Second ",G2_m),
+         G3_m = paste0("Final ",G3_m)) %>% 
+  arrange(G1_m,G2_m)
 
 
 # final plot
-nodes <- data.frame(ID = unique(c(tmp1$G1_m,tmp1$G2_m)),
-                    x = c(rep(1,3),rep(2,3)))
-edges <- data.frame(ID = 1:nrow(tmp1),
-                    N1 = tmp1$G1_m,
-                    N2 = tmp1$G2_m,
-                    Value = tmp1$n)
-cols <- c(low="#00990066",
-medium="#00009966",
-high ="#99000066")
+nodes <- data.frame(ID = unique(c(tmp1$G1_m,tmp1$G2_m,tmp1$G3_m) %>% sort()),
+                    x = c(rep(3,3),rep(1,3),rep(2,3)),
+                    y = rep(c(3,1,2),3))
+
+tmp2 <- master_data %>% 
+  select(matches("G._m")) %>% 
+  drop_na()%>% 
+  mutate(across(everything(),
+                ~cut(.x,breaks =grade_cuts,
+                    labels = c("low","medium","high")))) %>% 
+  group_by(G1_m,G2_m) %>% 
+  summarise(n = n()) %>% 
+  mutate(G1_m = paste0("First ",G1_m),
+         G2_m = paste0("Second ",G2_m)) %>% 
+  rename(N1 = G1_m, N2 = G2_m, Value = n)
+
+tmp3 <- master_data %>% 
+  select(matches("G._m")) %>% 
+  drop_na()%>% 
+  mutate(across(everything(),
+                ~cut(.x,breaks = grade_cuts,
+                    labels = c("low","medium","high")))) %>% 
+  group_by(G2_m,G3_m) %>% 
+  summarise(n = n()) %>% 
+  mutate(G2_m = paste0("Second ",G2_m),
+         G3_m = paste0("Final ",G3_m)) %>% 
+  rename(N1 = G2_m, N2 = G3_m, Value = n)
+
+tmp4 <- rbind(tmp2,tmp3)
+
+edges <- data.frame(ID = 1:nrow(tmp4),
+                    N1 = tmp4$N1,
+                    N2 = tmp4$N2,
+                    Value = tmp4$Value)
+cols <- c(low="#F05454",
+medium="#30475E",
+high ="#121212")
 style <- sapply(nodes$ID, function(id)
-list(col=cols[ gsub("(First|Second) ", "", id) ]), simplify=FALSE)
+list(col=cols[ gsub("(First|Second|Final) ", "", id) ]), simplify=FALSE)
 
 
 r <- makeRiver(nodes,edges,styles =style) 
-d <- list(srt=0, textcex=1.5) # default style
+d <- list(srt = 0, textcex=1, textcol = "white") 
 plot(r, plot_area=1, nodewidth=10, default_style=d)
-
+title("Flows of students between performance groups")
 ```
+
 
 
 # Question 3
@@ -491,8 +550,8 @@ helper_df <- master_data %>%
             fpom = sum((G3_m<G3_p) & sex == 'F')) %>% 
   mutate(fmop_perc = fmop/mop, mmop_perc = 1-fmop_perc,
          fpom_perc = fpom/pom, mpom_perc = 1-fpom_perc,
-         mop_perc = mop/(mop+pom),
-         pom_perc = 1- mop_perc)
+         mop_perc = mop/nrow(master_data),
+         pom_perc = pom/nrow(master_data))
 
 helper_df_2 <- helper_df %>% 
   pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
@@ -503,57 +562,127 @@ helper_df_3 <- helper_df %>%
   pivot_longer(c(mmop_perc,fmop_perc,mpom_perc,fpom_perc)) %>%
   select(c(name,value)) %>% 
   .[3:4,]
-                                                       
-master_data %>% 
-  #pivot_longer(c(G3_m,G3_p)) %>% 
+
+ seg_end_lst <- get_diag_segment_ends(side_length = 22)
+ seg_end <- seg_end_lst$end
+ fem_perc_diag <- seg_end_lst$fem_perc
+                                                  
+plt <-   
   ggplot()+
-  geom_colh(data = helper_df_2,aes(y = -1,x = 20*value,fill = name),width = 1,
-             position = "stackv")+
-  geom_col(data = helper_df_3,aes(x = -1,y = 20*value,fill = name),width = 1,
-             position = "stack")+
-  geom_point(aes(x=G3_m,y=G3_p,color = sex),
+  geom_segment(aes(x=0,y=0,xend=seg_end,yend=seg_end), size = 6, color ="#F05454", alpha = 0.5 )+
+  geom_segment(aes(x=seg_end,y=seg_end,xend=20,yend=20), size = 6, color ="#30475E",alpha = 0.5 )+
+  geom_point(data = master_data,aes(x=G3_m,y=G3_p,color = sex),
              size = 3,
-             position=position_dodge(width=0.3))+
-  geom_abline(slope = 1,intercept = 0)+
+             position=position_dodge(width=0.5),
+             alpha = 1)+
+  #geom_abline(slope = 1,intercept = 0)+
   annotate("text",label = paste("Better portuguese \nthan maths:\n",
                                 round(helper_df$pom_perc*100),
                                 "% of all"),
-           x =5.5, y =17)+
+            size = 4 ,
+           fontface = "italic",
+           x =4.5, y =17)+
   annotate("text",
            label = paste("Better maths \nthan portuguese:\n",
                         round(helper_df$mop_perc*100),
                         "% of all"),
+           size = 4 ,
+           fontface = "italic",
            x =17, y =3) +
-  scale_fill_manual(values = c("#F8766D", "#F8766D","#00BFC4", "#00BFC4"),
-                    )+
+  annotate("text",
+           label = paste0(round(fem_perc_diag*100),"%"),
+           size = 4,
+           color ="White",
+           x =1, y =1,
+           angle = 45)+
+    annotate("text",
+           label = paste0(round((1-fem_perc_diag)*100),"%"),
+           size = 4,
+           color ="White",
+           x =19, y =19,
+           angle = 45)+
+  #scale_fill_manual(values = c("#F05454", "#F05454","#30475E", "#30475E"),)+
   guides(fill="none")+
-  scale_color_manual(values = c("#F8766D", "#00BFC4"),labels = c("female","male"))+
-  coord_fixed()
+  scale_color_manual(values = c("#F05454","#30475E"),labels = c("female","male"))+
+  coord_fixed()+
+  #coord_cartesian(xlim = c(0,20),ylim = c(0,20))+
+  labs(x="Maths grade", y="Portuguese grade", title = "Relationship between grades from two subjects by gender")+
+  theme(panel.grid = element_blank(),
+        legend.box.background = element_blank(),
+        legend.key = element_rect(colour = "transparent",fill = alpha("red", 0)),
+        plot.margin = margin(0,0,0,-20)
+        )#panel.background = element_blank()) #element_rect(fill = "#F5F5F5", size = 5))
+ 
+  #pivot_longer(c(G3_m,G3_p)) %>% 
+  plt_b <- ggplot(data = helper_df_2)+
+  geom_colh(aes(y = 0,x = value,fill = name),
+            position = "stackv",
+            width = 0.5)+
+  scale_fill_manual(values = c("#F05454", "#30475E"),
+                    labels = c("female","male")) + 
+  theme_void()+
+  theme(legend.position = "none")+
+  geom_text(aes(x = (1-value)+0.1, y = 0,label = paste0(round(value,2)*100,"%")),
+            color = "white")
+  
+  plt_l <- ggplot(data = helper_df_3)+
+  geom_col(aes(x = 0,y = value,fill = name),
+           position = "stack",
+            width = 0.5)+
+  scale_fill_manual(values = c("#F05454", "#30475E"),
+                    labels = c("female","male")) + 
+  theme_void()+
+  theme(legend.position = "none")+
+  geom_text(aes(x =0 , y = value - 0.1,label = paste0(round(value,2)*100,"%")),
+            color = "white")
+  
+  
+  
+   
+   
+  lay <- rbind(c(1,2,2,2),
+               c(NA,NA,NA,NA),
+               c(NA,NA,3,NA))
+    
+  plt_fin <- arrangeGrob(plt_l,plt,plt_b, 
+              layout_matrix = lay,
+              widths = c(3,1,20,5),
+              heights = c(25,1,2))
+  #margin = theme(plot.margin = margin(0,0,0,0))
+
+  grid.arrange(plt_fin)
+ 
 ```
 
 
 ```{r}
-master_data %>% 
+math_pyr <- master_data %>% 
   group_by(age,sex) %>% 
   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
   filter(age<=19) %>% 
+  mutate(sex = ifelse(sex == "F","Female","Male")) %>% 
   #pivot_longer(-c(age,sex)) %>% 
   
 pyramid_chart( x = age, y = grade_m, group = sex,
-               xlab = "grade", title = "Maths grade by age and gender")
+               xlab = "Maths average grade",
+               bar_colors = c("#F05454","#30475E"))
   
   
 
-master_data %>% 
+port_pyr <- master_data %>% 
   group_by(age,sex) %>% 
   summarise(grade_m = mean(G3_m), grade_p = mean(G3_p), n = n()) %>% 
   #pivot_longer(-c(age,sex)) %>% 
-    filter(age<=19) %>% 
+    filter(age<=19) %>%  
+  mutate(sex = ifelse(sex == "F","Female","Male")) %>% 
 pyramid_chart( x = age, y = grade_p, group = sex,
-               xlab = "grade", title = "Portuguese grade by age and gender")
+               xlab = "Portuguese average grade",
+               bar_colors = c("#F05454","#30475E"))
 
 
-  
+comb <- ggarrange(math_pyr,port_pyr)
+annotate_figure(comb,top = text_grob("Grade average by age and gender",
+                                       size = 20))
 ```
 
 # References
